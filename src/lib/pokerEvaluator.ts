@@ -1,6 +1,3 @@
-// Reference to Cactus Kev's algorithm for 5-card poker evaluation
-// Link: http://suffe.cool/poker/evaluator.html
-
 export type HandRank = 
   | 'High Card'
   | 'One Pair'
@@ -68,7 +65,7 @@ function initTables() {
     [6, 5, 4, 3, 2],
     [5, 4, 3, 2, 1],
     [4, 3, 2, 1, 0],
-    [12, 3, 2, 1, 0],    // Ace-low (A2345)
+    [12, 3, 2, 1, 0],
   ];
   
   let handValue = 1;

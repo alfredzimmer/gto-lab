@@ -18,10 +18,10 @@ export default function CardDisplay({ card, onClick, isSelectable = false }: Car
   };
 
   const suitColors: Record<Suit, string> = {
-    hearts: 'text-red-600',
-    diamonds: 'text-red-600',
-    clubs: 'text-gray-900 dark:text-white',
-    spades: 'text-gray-900 dark:text-white'
+    hearts: 'text-red-600 dark:text-red-500',
+    diamonds: 'text-red-600 dark:text-red-500',
+    clubs: 'text-slate-900 dark:text-white',
+    spades: 'text-slate-900 dark:text-white'
   };
 
   if (!card) {
@@ -30,13 +30,13 @@ export default function CardDisplay({ card, onClick, isSelectable = false }: Car
         onClick={onClick}
         disabled={!isSelectable}
         className={`
-          w-24 h-36 bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 
-          rounded-lg flex items-center justify-center
-          ${isSelectable ? 'hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer' : 'cursor-default'}
+          w-20 h-28 bg-white dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700
+          rounded-md flex items-center justify-center
+          ${isSelectable ? 'hover:border-slate-400 dark:hover:border-slate-600 cursor-pointer' : 'cursor-default'}
           transition-colors
         `}
       >
-        <span className="text-5xl text-gray-400">?</span>
+        <span className="text-3xl text-slate-400 dark:text-slate-600">?</span>
       </button>
     );
   }
@@ -45,14 +45,14 @@ export default function CardDisplay({ card, onClick, isSelectable = false }: Car
     <button
       onClick={onClick}
       className={`
-        w-24 h-36 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 
-        rounded-lg flex flex-col items-center justify-center
-        ${onClick ? 'hover:border-red-500 hover:shadow-md cursor-pointer' : 'cursor-default'}
-        transition-all
+        w-20 h-28 bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700
+        rounded-md flex flex-col items-center justify-center gap-1
+        ${onClick ? 'hover:border-red-500 dark:hover:border-red-500 cursor-pointer' : 'cursor-default'}
+        transition-colors
       `}
     >
-      <span className="text-sm text-gray-500 dark:text-gray-400">{card.rank}</span>
-      <span className={`text-5xl ${suitColors[card.suit]}`}>
+      <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">{card.rank}</span>
+      <span className={`text-4xl ${suitColors[card.suit]}`}>
         {suitSymbols[card.suit]}
       </span>
     </button>

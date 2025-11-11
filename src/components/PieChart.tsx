@@ -32,7 +32,7 @@ export default function PieChart({ data }: PieChartProps) {
     if (!payload || payload.length === 0) return null;
     
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
         {payload.map((entry: any, index: number) => {
           const dataItem = chartData.find(d => d.name === entry.value);
           if (!dataItem) return null;
@@ -42,30 +42,24 @@ export default function PieChart({ data }: PieChartProps) {
           return (
             <div
               key={`legend-${index}`}
-              className={`flex items-center justify-between px-4 py-3 rounded min-w-[200px] cursor-pointer transition-all duration-200 ${
+              className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
                 isActive 
-                  ? 'bg-gray-200 dark:bg-gray-600 scale-105 shadow-lg' 
-                  : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-650'
+                  ? 'bg-slate-100 dark:bg-slate-800' 
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
               }`}
               onMouseEnter={() => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div
-                  className={`w-4 h-4 rounded-full shrink-0 transition-transform duration-200 ${
-                    isActive ? 'scale-125' : ''
-                  }`}
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: entry.color }}
                 />
-                <span className={`text-sm font-medium text-gray-900 dark:text-white truncate ${
-                  isActive ? 'font-bold' : ''
-                }`}>
+                <span className="text-xs text-slate-900 dark:text-white truncate">
                   {entry.value}
                 </span>
               </div>
-              <span className={`text-sm font-bold text-gray-700 dark:text-gray-300 ml-3 ${
-                isActive ? 'text-gray-900 dark:text-white' : ''
-              }`}>
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 ml-2">
                 {dataItem.value.toFixed(1)}%
               </span>
             </div>
@@ -76,28 +70,25 @@ export default function PieChart({ data }: PieChartProps) {
   };
 
   return (
-    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">
-        Win Probability Distribution
-      </h3>
+    <>
       {!mounted ? (
-        <div className="flex items-center justify-center h-[400px]">
-          <div className="text-gray-400">Loading chart...</div>
+        <div className="flex items-center justify-center h-[140px]">
+          <div className="text-slate-400 text-sm">Loading...</div>
         </div>
       ) : (
-        <div className="flex items-center justify-center gap-6">
-          <ResponsiveContainer width="65%" height={360}>
+        <div className="flex items-center gap-3">
+          <ResponsiveContainer width="60%" height={140}>
             <RechartsPie>
               <Pie
                 data={chartData}
                 cx="50%"
                 cy="50%"
-                innerRadius={70}
-                outerRadius={120}
-                paddingAngle={hasFullCircle ? 0 : 2}
+                innerRadius={35}
+                outerRadius={55}
+                paddingAngle={hasFullCircle ? 0 : 1}
                 dataKey="value"
                 animationBegin={0}
-                animationDuration={800}
+                animationDuration={600}
                 animationEasing="ease-out"
                 stroke="none"
                 onMouseEnter={(_, index) => setActiveIndex(index)}
@@ -110,22 +101,18 @@ export default function PieChart({ data }: PieChartProps) {
                       key={`cell-${index}`} 
                       fill={entry.color} 
                       stroke="none"
-                      opacity={activeIndex === null ? 1 : isActive ? 1 : 0.4}
-                      style={{
-                        filter: isActive ? 'brightness(1.1)' : 'none',
-                        transition: 'opacity 0.2s ease, filter 0.2s ease'
-                      }}
+                      opacity={activeIndex === null ? 1 : isActive ? 1 : 0.5}
                     />
                   );
                 })}
               </Pie>
             </RechartsPie>
           </ResponsiveContainer>
-          <div className="shrink-0">
+          <div className="flex-1">
             {renderLegend({ payload: chartData.map(d => ({ value: d.name, color: d.color })) })}
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

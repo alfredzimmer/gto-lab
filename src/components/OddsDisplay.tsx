@@ -28,7 +28,6 @@ export default function OddsDisplay({ odds, isCalculating }: OddsDisplayProps) {
     );
   }
 
-  // Sort by win percentage descending
   const sortedOdds = [...odds].sort((a, b) => b.winPercentage - a.winPercentage);
 
   return (

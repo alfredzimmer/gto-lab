@@ -57,7 +57,6 @@ export default function PlayerHand({
           />
         </div>
         
-        {/* Win Probability Display */}
         {hasCompleteHand && (
           <div className="flex-1 ml-2">
             {isCalculating ? (
