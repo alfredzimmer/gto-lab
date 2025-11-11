@@ -1,7 +1,21 @@
-import type { Card, Rank, Suit } from './types';
+import type { Card, Rank, Suit } from "./types";
 
-export const SUITS: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
-export const RANKS: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+export const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
+export const RANKS: Rank[] = [
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "J",
+  "Q",
+  "K",
+  "A",
+];
 
 export function createDeck(): Card[] {
   const deck: Card[] = [];
@@ -15,25 +29,35 @@ export function createDeck(): Card[] {
 
 export function cardToString(card: Card): string {
   const suitSymbols: Record<Suit, string> = {
-    hearts: '♥',
-    diamonds: '♦',
-    clubs: '♣',
-    spades: '♠'
+    hearts: "♥",
+    diamonds: "♦",
+    clubs: "♣",
+    spades: "♠",
   };
   return `${card.rank}${suitSymbols[card.suit]}`;
 }
 
 export function cardToPokerEvaluatorString(card: Card): string {
   const suitMap: Record<Suit, string> = {
-    hearts: 'h',
-    diamonds: 'd',
-    clubs: 'c',
-    spades: 's'
+    hearts: "h",
+    diamonds: "d",
+    clubs: "c",
+    spades: "s",
   };
   const rankMap: Record<Rank, string> = {
-    '2': '2', '3': '3', '4': '4', '5': '5', '6': '6',
-    '7': '7', '8': '8', '9': '9', '10': 'T', 'J': 'J',
-    'Q': 'Q', 'K': 'K', 'A': 'A'
+    "2": "2",
+    "3": "3",
+    "4": "4",
+    "5": "5",
+    "6": "6",
+    "7": "7",
+    "8": "8",
+    "9": "9",
+    "10": "T",
+    J: "J",
+    Q: "Q",
+    K: "K",
+    A: "A",
   };
   return `${rankMap[card.rank]}${suitMap[card.suit]}`;
 }
@@ -54,7 +78,8 @@ export function cardsEqual(card1: Card | null, card2: Card | null): boolean {
 
 export function getAvailableCards(usedCards: (Card | null)[]): Card[] {
   const deck = createDeck();
-  return deck.filter(card => 
-    !usedCards.some(usedCard => usedCard && cardsEqual(card, usedCard))
+  return deck.filter(
+    (card) =>
+      !usedCards.some((usedCard) => usedCard && cardsEqual(card, usedCard)),
   );
 }

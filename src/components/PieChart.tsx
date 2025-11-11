@@ -1,17 +1,37 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { useEffect, useState } from "react";
+import {
+  Cell,
+  Pie,
+  PieChart as RechartsPie,
+  ResponsiveContainer,
+} from "recharts";
+import type { OddsResult, Player } from "@/lib/types";
+
+const PLAYER_COLORS = [
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
+  "#f59e0b",
+  "#10b981",
+  "#06b6d4",
+  "#6366f1",
+  "#f43f5e",
+  "#14b8a6",
+];
 
 interface PieChartProps {
-  data: {
-    label: string;
-    value: number;
-    color: string;
-  }[];
+  odds: OddsResult[];
+  players: Player[];
+  isSingleHandMode: boolean;
 }
 
-export default function PieChart({ data }: PieChartProps) {
+export default function PieChart({
+  odds,
+  players,
+  isSingleHandMode,
+}: PieChartProps) {
   const [mounted, setMounted] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -19,33 +39,82 @@ export default function PieChart({ data }: PieChartProps) {
     setMounted(true);
   }, []);
 
-  const chartData = data.map(item => ({
+  const data =
+    odds.length === 0
+      ? [{ label: "Tie", value: 100, color: "#64748B" }]
+      : isSingleHandMode
+        ? [
+            {
+              label: odds[0].playerName.split(" vs ")[0],
+              value: odds[0].winPercentage,
+              color: "#3b82f6",
+            },
+            ...(odds[0].tiePercentage > 0.1
+              ? [
+                  {
+                    label: "Tie",
+                    value: odds[0].tiePercentage,
+                    color: "#64748B",
+                  },
+                ]
+              : []),
+            {
+              label: "Opponent Wins",
+              value: 100 - odds[0].winPercentage - odds[0].tiePercentage,
+              color: "#94a3b8",
+            },
+          ]
+        : [
+            ...odds.map((playerOdds) => ({
+              label: playerOdds.playerName,
+              value: playerOdds.winPercentage,
+              color:
+                PLAYER_COLORS[
+                  players.findIndex((p) => p.id === playerOdds.playerId) % 9
+                ],
+            })),
+            ...(odds.length > 0 && odds[0].tiePercentage > 0.1
+              ? [
+                  {
+                    label: "Tie",
+                    value: odds[0].tiePercentage,
+                    color: "#64748B",
+                  },
+                ]
+              : []),
+          ];
+
+  const chartData = data.map((item) => ({
     name: item.label,
     value: item.value,
-    color: item.color
+    color: item.color,
   }));
 
-  const hasFullCircle = chartData.length === 1 || chartData.some(item => item.value >= 99.9);
+  const hasFullCircle =
+    chartData.length === 1 || chartData.some((item) => item.value >= 99.9);
 
-  const renderLegend = (props: any) => {
+  const renderLegend = (props: {
+    payload?: Array<{ value: string; color: string }>;
+  }) => {
     const { payload } = props;
     if (!payload || payload.length === 0) return null;
-    
+
     return (
       <div className="flex flex-col gap-1.5">
-        {payload.map((entry: any, index: number) => {
-          const dataItem = chartData.find(d => d.name === entry.value);
+        {payload.map((entry, index) => {
+          const dataItem = chartData.find((d) => d.name === entry.value);
           if (!dataItem) return null;
-          
+
           const isActive = activeIndex === index;
-          
+
           return (
-            <div
-              key={`legend-${index}`}
+            <button
+              key={`legend-${dataItem.name}-${index}`}
+              type="button"
               className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
-                isActive 
-                  ? 'bg-slate-100 dark:bg-slate-800' 
-                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                isActive
+                  ? "bg-slate-100 dark:bg-slate-800"
+                  : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
               }`}
               onMouseEnter={() => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
@@ -62,7 +131,7 @@ export default function PieChart({ data }: PieChartProps) {
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300 ml-2">
                 {dataItem.value.toFixed(1)}%
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -70,7 +139,7 @@ export default function PieChart({ data }: PieChartProps) {
   };
 
   return (
-    <>
+    <div className="p-6 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
       {!mounted ? (
         <div className="flex items-center justify-center h-[140px]">
           <div className="text-slate-400 text-sm">Loading...</div>
@@ -97,9 +166,9 @@ export default function PieChart({ data }: PieChartProps) {
                 {chartData.map((entry, index) => {
                   const isActive = activeIndex === index;
                   return (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.color} 
+                    <Cell
+                      key={`cell-${entry.name}-${entry.value}`}
+                      fill={entry.color}
                       stroke="none"
                       opacity={activeIndex === null ? 1 : isActive ? 1 : 0.5}
                     />
@@ -109,10 +178,15 @@ export default function PieChart({ data }: PieChartProps) {
             </RechartsPie>
           </ResponsiveContainer>
           <div className="flex-1">
-            {renderLegend({ payload: chartData.map(d => ({ value: d.name, color: d.color })) })}
+            {renderLegend({
+              payload: chartData.map((d) => ({
+                value: d.name,
+                color: d.color,
+              })),
+            })}
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
