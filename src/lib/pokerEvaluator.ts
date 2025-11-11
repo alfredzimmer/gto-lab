@@ -201,17 +201,17 @@ function eval5Cards(cards: number[]): number {
 
   if ((cards[0] & cards[1] & cards[2] & cards[3] & cards[4] & 0xf000) !== 0) {
     const rankBits = allCards >> 16;
-    return flushLookup?.[rankBits];
+    return flushLookup?.[rankBits] ?? 7462;
   }
 
   const rankBits = allCards >> 16;
-  const uniqueVal = uniqueLookup?.[rankBits];
+  const uniqueVal = uniqueLookup?.[rankBits] ?? 0;
   if (uniqueVal !== 0) {
     return uniqueVal;
   }
 
   const product = cards.reduce((acc, c) => acc * (c & 0xff), 1);
-  return productLookup?.get(product) || 7462;
+  return productLookup?.get(product) ?? 7462;
 }
 
 function valueToRank(value: number): { rank: number; name: HandRank } {
