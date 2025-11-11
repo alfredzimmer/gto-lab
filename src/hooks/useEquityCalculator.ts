@@ -111,7 +111,7 @@ export function useEquityCalculator() {
         const numOpponents = players.length - 1;
 
         const result = calculateHandStrength(
-          [player.cards[0]!, player.cards[1]!],
+          [player.cards[0] as Card, player.cards[1] as Card],
           communityCards,
           numOpponents,
         );
