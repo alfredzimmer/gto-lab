@@ -59,7 +59,7 @@ export default function PieChart({
                 ]
               : []),
             {
-              label: "Opponent Wins",
+              label: "Others Win",
               value: 100 - odds[0].winPercentage - odds[0].tiePercentage,
               color: "#94a3b8",
             },

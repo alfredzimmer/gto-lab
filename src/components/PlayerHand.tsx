@@ -1,15 +1,15 @@
 "use client";
 
-import type { OddsResult, Player } from "@/lib/types";
+import type { Card, OddsResult, Player } from "@/lib/types";
 import CardPicker from "./CardPicker";
 
 interface PlayerHandProps {
   player: Player;
-  usedCards: (import("@/lib/types").Card | null)[];
+  usedCards: (Card | null)[];
   onCardSelect: (
     playerIndex: number,
     cardIndex: 0 | 1,
-    card: import("@/lib/types").Card | null,
+    card: Card | null,
   ) => void;
   onRemove: () => void;
   playerIndex: number;

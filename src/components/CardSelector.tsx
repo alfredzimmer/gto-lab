@@ -42,7 +42,7 @@ export default function CardSelector({
   };
 
   return (
-    <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+    <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 mb-8">
       <p className="text-[10px] text-slate-600 dark:text-slate-400 mb-2 text-center">
         {getSelectionMessage()}
       </p>
