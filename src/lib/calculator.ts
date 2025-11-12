@@ -77,8 +77,9 @@ export function calculateHandStrength(
 
     const finalCommunity: Card[] = [];
     for (let i = 0; i < 5; i++) {
-      if (communityCards[i]) {
-        finalCommunity.push(communityCards[i]!);
+      const card = communityCards[i];
+      if (card) {
+        finalCommunity.push(card);
       } else {
         finalCommunity.push(shuffled[deckIndex++]);
       }
@@ -148,8 +149,9 @@ function runSimulation(
     let deckIndex = 0;
 
     for (let i = 0; i < 5; i++) {
-      if (communityCards[i]) {
-        finalCommunity.push(communityCards[i]!);
+      const card = communityCards[i];
+      if (card) {
+        finalCommunity.push(card);
       } else {
         finalCommunity.push(shuffled[deckIndex++]);
       }
@@ -157,9 +159,17 @@ function runSimulation(
 
     const handStrengths = players.map((player) => {
       try {
+        if (!player.cards[0] || !player.cards[1]) {
+          return {
+            value: 10000,
+            rank: -1,
+            name: "High Card" as const,
+            cards: [],
+          };
+        }
         const playerCards = [
-          cardToPokerEvaluatorString(player.cards[0]!),
-          cardToPokerEvaluatorString(player.cards[1]!),
+          cardToPokerEvaluatorString(player.cards[0]),
+          cardToPokerEvaluatorString(player.cards[1]),
         ];
         const communityCardsStr = finalCommunity.map(
           cardToPokerEvaluatorString,
