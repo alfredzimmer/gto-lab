@@ -12,27 +12,17 @@ A minimalist Texas Hold'em poker equity calculator built with Next.js 15, featur
 - **Dark Mode Support** - Automatic theme based on system preferences
 - **State Persistence** - Automatic save/restore via localStorage
 
-## Tech Stack
 
-- **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS v4
-- **Poker Engine**: Cactus Kev algorithm with lookup tables
-- **Code Quality**: Biome for linting and formatting
 
 ## Getting Started
 
 ```bash
-# Install dependencies
 npm install
 
-# Run development server
 npm run dev
 
-# Build for production
 npm run build
 
-# Run production server
 npm start
 ```
 
@@ -61,29 +51,6 @@ src/
 │   ├── pokerEvaluator.ts     # Hand evaluation using Cactus Kev
 │   ├── deck.ts               # Deck utilities
 │   └── types.ts              # TypeScript definitions
-```
-
-## Algorithm
-
-The calculator uses two key algorithms:
-
-1. **Hand Evaluation** - Cactus Kev's algorithm with prime number lookup tables for efficient hand comparison
-2. **Equity Calculation** - Monte Carlo simulation running 10,000 random board completions to determine win probabilities
-
-## Development
-
-```bash
-# Run tests
-npm test
-
-# Run linter
-npm run lint
-
-# Format code
-npm run format
-
-# Type check
-npm run type-check
 ```
 
 ## License
