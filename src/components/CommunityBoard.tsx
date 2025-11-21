@@ -36,7 +36,7 @@ export default function CommunityBoard({
       <div className="flex gap-3 items-center justify-center h-[calc(100%-2rem)]">
         {communityCards.map((card, index) => (
           <div
-            key={`community-${index}`}
+            key={card ? `${card.rank}-${card.suit}-${index}` : `empty-community-${index}`}
             className={`shrink-0 cursor-pointer ${selectedPosition && "type" in selectedPosition && selectedPosition.type === "community" && selectedPosition.cardIndex === index ? "ring-1 ring-blue-500 rounded-md" : ""}`}
           >
             <CardDisplay

@@ -44,8 +44,8 @@ src/
 │   ├── CardSelector.tsx      # Card selection interface
 │   ├── CardDisplay.tsx       # Individual card component
 │   └── Header.tsx            # Navigation header
-├── hooks/
-│   └── useEquityCalculator.ts # Main game logic & state
+├── store/
+│   └── useGameStore.ts       # Global state management (Zustand)
 ├── lib/
 │   ├── calculator.ts         # Monte Carlo simulation engine
 │   ├── pokerEvaluator.ts     # Hand evaluation using Cactus Kev

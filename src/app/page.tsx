@@ -1,10 +1,12 @@
 "use client";
 
+import { useMemo } from "react";
 import CardSelector from "@/components/CardSelector";
 import CommunityBoard from "@/components/CommunityBoard";
 import PieChart from "@/components/PieChart";
 import PlayersGrid from "@/components/PlayersGrid";
-import { useEquityCalculator } from "@/hooks/useEquityCalculator";
+import type { Card } from "@/lib/types";
+import { useGameStore } from "@/store/useGameStore";
 
 export default function Home() {
   const {
@@ -12,15 +14,27 @@ export default function Home() {
     communityCards,
     odds,
     selectedPosition,
-    usedCards,
-    isSingleHandMode,
     handleCardSelect,
     handleCardRemove,
     clearAll,
     addPlayer,
     removePlayer,
     setSelectedPosition,
-  } = useEquityCalculator();
+  } = useGameStore();
+
+  const usedCards = useMemo(() => {
+    const cards: (Card | null)[] = [];
+    for (const player of players) {
+      cards.push(player.cards[0], player.cards[1]);
+    }
+    cards.push(...communityCards);
+    return cards;
+  }, [players, communityCards]);
+
+  const isSingleHandMode = useMemo(() => {
+    const validPlayers = players.filter((p) => p.cards[0] && p.cards[1]);
+    return validPlayers.length === 1;
+  }, [players]);
 
   const handlePlayerCardClick = (
     playerIndex: number,
@@ -68,7 +82,7 @@ export default function Home() {
           </div>
 
           <div className="flex gap-4 items-start">
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-[320px]">
               <PieChart
                 odds={odds}
                 players={players}
