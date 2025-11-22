@@ -39,10 +39,17 @@ export default function PieChart({
     setMounted(true);
   }, []);
 
+  // Determine if we should display in single hand mode based on props AND data
+  // This prevents a flash of incorrect state when transitioning from 1 -> 2 valid players
+  // because odds update is delayed by 100ms
+  const displayAsSingleHand =
+    isSingleHandMode ||
+    (odds.length === 1 && odds[0].playerName.includes(" vs "));
+
   const data =
     odds.length === 0
       ? [{ label: "Tie", value: 100, color: "#64748B" }]
-      : isSingleHandMode
+      : displayAsSingleHand
         ? [
             {
               label: odds[0].playerName.split(" vs ")[0],
@@ -59,7 +66,7 @@ export default function PieChart({
                 ]
               : []),
             {
-              label: "Others Win",
+              label: "Others",
               value: 100 - odds[0].winPercentage - odds[0].tiePercentage,
               color: "#94a3b8",
             },
@@ -111,7 +118,7 @@ export default function PieChart({
             <button
               key={`legend-${dataItem.name}-${index}`}
               type="button"
-              className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
+              className={`w-full flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
                 isActive
                   ? "bg-slate-100 dark:bg-slate-800"
                   : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
@@ -119,16 +126,16 @@ export default function PieChart({
               onMouseEnter={() => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <div
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: entry.color }}
                 />
-                <span className="text-xs text-slate-900 dark:text-white truncate">
+                <span className="text-xs text-slate-900 dark:text-white">
                   {entry.value}
                 </span>
               </div>
-              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 ml-2">
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 ml-2 shrink-0">
                 {dataItem.value.toFixed(1)}%
               </span>
             </button>
@@ -145,39 +152,41 @@ export default function PieChart({
           <div className="text-slate-400 text-sm">Loading...</div>
         </div>
       ) : (
-        <div className="flex items-center gap-3">
-          <ResponsiveContainer width="60%" height={140}>
-            <RechartsPie>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={35}
-                outerRadius={55}
-                paddingAngle={hasFullCircle ? 0 : 1}
-                dataKey="value"
-                animationBegin={0}
-                animationDuration={600}
-                animationEasing="ease-out"
-                stroke="none"
-                onMouseEnter={(_, index) => setActiveIndex(index)}
-                onMouseLeave={() => setActiveIndex(null)}
-              >
-                {chartData.map((entry, index) => {
-                  const isActive = activeIndex === index;
-                  return (
-                    <Cell
-                      key={`cell-${entry.name}-${entry.value}`}
-                      fill={entry.color}
-                      stroke="none"
-                      opacity={activeIndex === null ? 1 : isActive ? 1 : 0.5}
-                    />
-                  );
-                })}
-              </Pie>
-            </RechartsPie>
-          </ResponsiveContainer>
-          <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <div className="w-[140px] h-[140px] shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsPie>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={35}
+                  outerRadius={55}
+                  paddingAngle={hasFullCircle ? 0 : 1}
+                  dataKey="value"
+                  animationBegin={0}
+                  animationDuration={600}
+                  animationEasing="ease-out"
+                  stroke="none"
+                  onMouseEnter={(_, index) => setActiveIndex(index)}
+                  onMouseLeave={() => setActiveIndex(null)}
+                >
+                  {chartData.map((entry, index) => {
+                    const isActive = activeIndex === index;
+                    return (
+                      <Cell
+                        key={`cell-${entry.name}-${entry.value}`}
+                        fill={entry.color}
+                        stroke="none"
+                        opacity={activeIndex === null ? 1 : isActive ? 1 : 0.5}
+                      />
+                    );
+                  })}
+                </Pie>
+              </RechartsPie>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex-1 min-w-32">
             {renderLegend({
               payload: chartData.map((d) => ({
                 value: d.name,

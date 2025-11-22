@@ -12,10 +12,12 @@ interface SimulationResult {
   ties: number[];
 }
 
+const numOfSimulations = 100000;
+
 export function calculateOdds(
   players: Player[],
   communityCards: (Card | null)[],
-  simulations = 70000,
+  simulations = numOfSimulations,
 ): OddsResult[] {
   const validPlayers = players.filter((p) => p.cards[0] && p.cards[1]);
 
@@ -56,7 +58,7 @@ export function calculateHandStrength(
   playerCards: [Card, Card],
   communityCards: (Card | null)[],
   numOpponents: number = 1,
-  simulations: number = 70000,
+  simulations: number = numOfSimulations,
 ): { winPercentage: number; tiePercentage: number } {
   const usedCards: Card[] = [playerCards[0], playerCards[1]];
   for (const card of communityCards) {
