@@ -18,7 +18,7 @@ export default function PracticePage() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<PracticeSettings>({
     minOpponents: 1,
-    maxOpponents: 3,
+    maxOpponents: 2,
     difficulty: "medium",
   });
   const [result, setResult] = useState<{
@@ -106,22 +106,22 @@ export default function PracticePage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0a0a0a]">
-      <main className="container mx-auto px-6 py-8 max-w-[1400px]">
-        <div className="mb-8 text-center lg:text-left">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+      <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-[1400px]">
+        <div className="mb-4 sm:mb-8 text-center lg:text-left">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
             Equity Practice
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Make the right decision based on pot odds and equity.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8 flex flex-col gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
+          <div className="lg:col-span-8 flex flex-col gap-4 sm:gap-8">
             <PracticeTable gameState={gameState} revealHands={!!result} />
           </div>
 
-          <div className="lg:col-span-4 flex flex-col gap-6">
+          <div className="lg:col-span-4 flex flex-col gap-4 sm:gap-6">
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
                 Your Decision

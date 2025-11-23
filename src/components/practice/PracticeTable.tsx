@@ -11,7 +11,7 @@ export default function PracticeTable({
   revealHands,
 }: PracticeTableProps) {
   return (
-    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 p-8 min-h-[600px] flex flex-col justify-between gap-8 relative overflow-hidden">
+    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-8 min-h-[400px] sm:min-h-[600px] flex flex-col justify-between gap-4 sm:gap-8 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-slate-900 via-transparent to-transparent" />
 
       <div className="flex flex-col items-center gap-3 z-10 w-full">
@@ -61,21 +61,21 @@ export default function PracticeTable({
           ))}
         </div>
 
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4 sm:gap-8">
           <div className="flex flex-col items-center">
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+            <span className="text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
               Pot
             </span>
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">
+            <span className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
               ${gameState.pot}
             </span>
           </div>
-          <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+          <div className="w-px h-6 sm:h-8 bg-slate-200 dark:bg-slate-700" />
           <div className="flex flex-col items-center">
-            <span className="text-xs font-medium text-red-500 uppercase tracking-wider mb-1">
+            <span className="text-[10px] sm:text-xs font-medium text-red-500 uppercase tracking-wider mb-1">
               Bet
             </span>
-            <span className="text-2xl font-bold text-red-600 dark:text-red-400">
+            <span className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
               ${gameState.bet}
             </span>
           </div>
