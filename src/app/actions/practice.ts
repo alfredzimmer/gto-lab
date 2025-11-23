@@ -130,7 +130,7 @@ export async function savePracticeResult(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { success: false, error: "User not logged in" };
+    return { success: true, message: "User not logged in" };
   }
 
   const { data: profile, error: profileError } = await supabase

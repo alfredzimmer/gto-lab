@@ -61,7 +61,7 @@ export default function PracticePage() {
     // Pot Odds = Amount to Call / (Total Pot + Amount to Call)
     // Total Pot = Current Pot + Villain Bet + Hero Call
     const callAmount = bet;
-    const totalPotAfterCall = pot + 2 * bet;
+    const totalPotAfterCall = pot + opponentCount * bet;
     const potOdds = callAmount / totalPotAfterCall;
 
     // EV = (Equity * TotalPotAfterCall) - CallAmount
