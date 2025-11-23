@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import CardSelector from "@/components/CardSelector";
-import CommunityBoard from "@/components/CommunityBoard";
-import PieChart from "@/components/PieChart";
-import PlayersGrid from "@/components/PlayersGrid";
+import CardSelector from "@/components/cards/CardSelector";
+import CommunityBoard from "@/components/game/CommunityBoard";
+import PieChart from "@/components/charts/PieChart";
+import PlayersGrid from "@/components/players/PlayersGrid";
 import type { Card } from "@/lib/types";
 import { useGameStore } from "@/store/useGameStore";
 

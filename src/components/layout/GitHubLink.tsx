@@ -4,7 +4,7 @@ export default function GitHubLink() {
       href="https://github.com/alfredzimmer/poker-odds"
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 px-3 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-slate-600 transition-all shadow-md hover:shadow-lg"
+      className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-slate-600 transition-all shadow-md hover:shadow-lg"
       title="View on GitHub"
     >
       <svg
@@ -20,7 +20,7 @@ export default function GitHubLink() {
           clipRule="evenodd"
         />
       </svg>
-      <span className="font-medium text-sm">GitHub</span>
+      <span className="font-medium text-sm hidden sm:inline">GitHub</span>
     </a>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type { Card, OddsResult, Player } from "@/lib/types";
-import CardPicker from "./CardPicker";
+import CardPicker from "../cards/CardPicker";
 
 interface PlayerHandProps {
   player: Player;

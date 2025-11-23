@@ -19,9 +19,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.dark body {
-  background: #0a0a0a;
-  color: #f5f5f5;
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #0a0a0a;
+    color: #f5f5f5;
+  }
 }
 
 /* Clean, minimal scrollbar */
@@ -39,14 +41,18 @@ body {
   border-radius: 4px;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #334155;
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+  }
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
 }

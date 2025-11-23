@@ -1,7 +1,7 @@
 "use client";
 
 import type { OddsResult, Player } from "@/lib/types";
-import CardDisplay from "./CardDisplay";
+import CardDisplay from "../cards/CardDisplay";
 
 type CardPosition =
   | {

@@ -39,9 +39,6 @@ export default function PieChart({
     setMounted(true);
   }, []);
 
-  // Determine if we should display in single hand mode based on props AND data
-  // This prevents a flash of incorrect state when transitioning from 1 -> 2 valid players
-  // because odds update is delayed by 100ms
   const displayAsSingleHand =
     isSingleHandMode ||
     (odds.length === 1 && odds[0].playerName.includes(" vs "));

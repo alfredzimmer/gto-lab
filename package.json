@@ -1,5 +1,5 @@
 {
-  "name": "poker-odds",
+  "name": "poker-equity-playground",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,10 +8,13 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "test": "jest",
+    "test": "jest --testPathIgnorePatterns=\\.perf\\.test\\.ts",
+    "test:perf": "jest \\.perf\\.test\\.ts",
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.84.0",
     "next": "16.0.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",

@@ -77,6 +77,17 @@ describe("Calculator Performance Tests", () => {
       expect(result).toHaveLength(2);
       expect(duration).toBeLessThan(200000);
     });
+
+    it("should run 200000 simulations", () => {
+      const startTime = performance.now();
+      const result = calculateOdds(players, communityCards, 200000);
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
+      console.log(`100000 simulations took: ${duration.toFixed(2)}ms`);
+      expect(result).toHaveLength(2);
+      expect(duration).toBeLessThan(200000);
+    });
   });
 
   describe("calculateHandStrength Performance", () => {
@@ -150,6 +161,25 @@ describe("Calculator Performance Tests", () => {
 
       console.log(
         `Hand strength 100000 simulations took: ${duration.toFixed(2)}ms`,
+      );
+      expect(result).toHaveProperty("winPercentage");
+      expect(result).toHaveProperty("tiePercentage");
+      expect(duration).toBeLessThan(200000);
+    });
+
+    it("should run 200000 simulations", () => {
+      const startTime = performance.now();
+      const result = calculateHandStrength(
+        player1Cards,
+        communityCards,
+        1,
+        200000,
+      );
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
+      console.log(
+        `Hand strength 200000 simulations took: ${duration.toFixed(2)}ms`,
       );
       expect(result).toHaveProperty("winPercentage");
       expect(result).toHaveProperty("tiePercentage");
