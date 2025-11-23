@@ -21,8 +21,8 @@ A real-time Texas Hold'em equity calculator and practice tool designed to help p
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/alfredzimmer/poker-odds.git
-   cd poker-odds
+   git clone https://github.com/alfredzimmer/poker-equity-playground.git
+   cd poker-equity-playground
    ```
 
 2. **Install dependencies**

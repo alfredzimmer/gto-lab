@@ -60,7 +60,7 @@ describe("Practice Actions", () => {
       (createClient as jest.Mock).mockResolvedValue(mockSupabase);
     });
 
-    it("should return error if user is not logged in", async () => {
+    it("should return success with message if user is not logged in", async () => {
       mockSupabase.auth.getUser.mockResolvedValue({ data: { user: null } });
 
       const result = await savePracticeResult(
@@ -80,8 +80,8 @@ describe("Practice Actions", () => {
         { equity: 0.5, ev: 10, correct: true },
       );
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("User not logged in");
+      expect(result.success).toBe(true);
+      expect(result.message).toBe("User not logged in");
     });
 
     it("should save result if user is logged in", async () => {
