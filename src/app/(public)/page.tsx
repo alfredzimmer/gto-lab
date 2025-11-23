@@ -81,27 +81,27 @@ export default function Home() {
             />
           </div>
 
-          <div className="flex gap-4 items-start">
-            <div className="flex-1 min-w-[320px]">
+          <div className="flex flex-col sm:flex-row gap-4 items-start">
+            <div className="hidden sm:block flex-1 min-w-[320px]">
               <PieChart
                 odds={odds}
                 players={players}
                 isSingleHandMode={isSingleHandMode}
               />
             </div>
-            <div className="flex flex-col gap-2 shrink-0">
+            <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={addPlayer}
                 disabled={players.length >= 9}
-                className="px-4 py-2.5 text-sm font-medium text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 Add Player
               </button>
               <button
                 type="button"
                 onClick={clearAll}
-                className="px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-md transition-colors whitespace-nowrap"
+                className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-md transition-colors whitespace-nowrap"
               >
                 Clear All
               </button>

@@ -34,13 +34,13 @@ export default function CardDisplay({
         onClick={onClick}
         disabled={!isSelectable}
         className={`
-          w-16 h-22 sm:w-20 sm:h-28 bg-white dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700
+          w-14 h-20 sm:w-20 sm:h-28 bg-white dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700
           rounded-md flex items-center justify-center
           ${isSelectable ? "hover:border-slate-400 dark:hover:border-slate-600 cursor-pointer" : "cursor-default"}
           transition-colors
         `}
       >
-        <span className="text-2xl sm:text-3xl text-slate-400 dark:text-slate-600">
+        <span className="text-xl sm:text-3xl text-slate-400 dark:text-slate-600">
           ?
         </span>
       </button>
@@ -52,16 +52,16 @@ export default function CardDisplay({
       type="button"
       onClick={onClick}
       className={`
-        w-16 h-22 sm:w-20 sm:h-28 bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700
+        w-14 h-20 sm:w-20 sm:h-28 bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700
         rounded-md flex flex-col items-center justify-center gap-1
         ${onClick ? "hover:border-red-500 dark:hover:border-red-500 cursor-pointer" : "cursor-default"}
         transition-colors
       `}
     >
-      <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400">
+      <span className="text-[10px] sm:text-sm font-semibold text-slate-600 dark:text-slate-400">
         {card.rank}
       </span>
-      <span className={`text-3xl sm:text-4xl ${suitColors[card.suit]}`}>
+      <span className={`text-2xl sm:text-4xl ${suitColors[card.suit]}`}>
         {suitSymbols[card.suit]}
       </span>
     </button>

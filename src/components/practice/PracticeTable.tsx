@@ -14,14 +14,14 @@ export default function PracticeTable({
     <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 p-8 min-h-[600px] flex flex-col justify-between gap-8 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-slate-900 via-transparent to-transparent" />
 
-      <div className="flex flex-col items-center gap-3 z-10">
-        <div className="flex gap-8">
+      <div className="flex flex-col items-center gap-3 z-10 w-full">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-8 w-full">
           {gameState.villainHands.map((hand, index) => (
             <div
               key={`${gameState.id}-opp-${index}`}
               className="flex flex-col items-center gap-2"
             >
-              <div className="flex gap-3">
+              <div className="flex gap-1 sm:gap-3">
                 {revealHands ? (
                   <>
                     <CardDisplay card={hand[0]} />
@@ -29,20 +29,20 @@ export default function PracticeTable({
                   </>
                 ) : (
                   <>
-                    <div className="w-16 h-22 sm:w-20 sm:h-28 bg-white dark:bg-slate-800 rounded-md border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
-                      <div className="w-12 h-18 sm:w-16 sm:h-24 bg-slate-100 dark:bg-slate-700/50 rounded-sm" />
+                    <div className="w-14 h-20 sm:w-20 sm:h-28 bg-white dark:bg-slate-800 rounded-md border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
+                      <div className="w-10 h-16 sm:w-16 sm:h-24 bg-slate-100 dark:bg-slate-700/50 rounded-sm" />
                     </div>
-                    <div className="w-16 h-22 sm:w-20 sm:h-28 bg-white dark:bg-slate-800 rounded-md border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
-                      <div className="w-12 h-18 sm:w-16 sm:h-24 bg-slate-100 dark:bg-slate-700/50 rounded-sm" />
+                    <div className="w-14 h-20 sm:w-20 sm:h-28 bg-white dark:bg-slate-800 rounded-md border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
+                      <div className="w-10 h-16 sm:w-16 sm:h-24 bg-slate-100 dark:bg-slate-700/50 rounded-sm" />
                     </div>
                   </>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300">
                   OP{index + 1}
                 </div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">
                   Opponent {index + 1}
                 </span>
               </div>
@@ -54,8 +54,8 @@ export default function PracticeTable({
         )}
       </div>
 
-      <div className="flex flex-col items-center gap-6 z-10">
-        <div className="flex gap-3 p-4 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50 backdrop-blur-sm">
+      <div className="flex flex-col items-center gap-6 z-10 w-full">
+        <div className="flex gap-2 sm:gap-3 p-2 sm:p-4 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50 backdrop-blur-sm max-w-full overflow-x-auto">
           {gameState.board.map((card, i) => (
             <CardDisplay key={`${card.rank}-${card.suit}-${i}`} card={card} />
           ))}
