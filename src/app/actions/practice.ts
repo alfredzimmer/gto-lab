@@ -70,7 +70,7 @@ export async function generatePracticeHand(
       5000,
     );
     equity = (winPercentage + tiePercentage / 2) / 100;
-  } while (equity >= 0.7);
+  } while (equity >= 0.7 || equity <= 0.2);
 
   const { heroHand, villainHands, board, opponentCount } = boardData;
   const pot = Math.floor(Math.random() * 150) + 50; // Random pot size [50, 200]
