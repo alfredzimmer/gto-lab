@@ -1,5 +1,6 @@
 import { generatePracticeHand, savePracticeResult } from "./practice";
 import { createClient } from "@/lib/supabase/server";
+import { calculateHandStrength } from "@/lib/calculator";
 
 // Mock Supabase
 jest.mock("@/lib/supabase/server", () => ({
@@ -34,6 +35,20 @@ describe("Practice Actions", () => {
 
       expect(state.opponentCount).toBe(3);
       expect(state.villainHands).toHaveLength(3);
+    });
+
+    it("should ensure generated hand has equity < 70%", async () => {
+      for (let i = 0; i < 3; i++) {
+        const state = await generatePracticeHand();
+        const { winPercentage, tiePercentage } = calculateHandStrength(
+          state.heroHand,
+          state.board,
+          state.opponentCount,
+          10000,
+        );
+        const equity = (winPercentage + tiePercentage / 2) / 100;
+        expect(equity).toBeLessThan(0.75);
+      }
     });
   });
 
