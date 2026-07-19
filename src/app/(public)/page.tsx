@@ -1,122 +1,145 @@
 "use client";
 
-import { useMemo } from "react";
-import CardSelector from "@/components/cards/CardSelector";
-import CommunityBoard from "@/components/game/CommunityBoard";
-import PieChart from "@/components/charts/PieChart";
-import PlayersGrid from "@/components/players/PlayersGrid";
-import type { Card } from "@/lib/types";
-import { useGameStore } from "@/store/useGameStore";
+import { useCallback, useEffect, useState } from "react";
+import GtoFeedback from "@/components/gto/GtoFeedback";
+import GtoTable from "@/components/gto/GtoTable";
+import {
+  type ActionProb,
+  type SpotInfo,
+  describeSpot,
+  generateScenario,
+  getStrategy,
+  loadStrategySession,
+} from "@/lib/gto/strategy";
 
-export default function Home() {
-  const {
-    players,
-    communityCards,
-    odds,
-    selectedPosition,
-    handleCardSelect,
-    handleCardRemove,
-    clearAll,
-    addPlayer,
-    removePlayer,
-    setSelectedPosition,
-  } = useGameStore();
+type ModelStatus = "loading" | "ready" | "unavailable";
 
-  const usedCards = useMemo(() => {
-    const cards: (Card | null)[] = [];
-    for (const player of players) {
-      cards.push(player.cards[0], player.cards[1]);
+export default function GtoTrainerPage() {
+  const [modelStatus, setModelStatus] = useState<ModelStatus>("loading");
+  const [spot, setSpot] = useState<SpotInfo | null>(null);
+  const [strategy, setStrategy] = useState<ActionProb[] | null>(null);
+  const [userAction, setUserAction] = useState<string | null>(null);
+  const [dealing, setDealing] = useState(false);
+
+  useEffect(() => {
+    loadStrategySession()
+      .then(() => setModelStatus("ready"))
+      .catch(() => setModelStatus("unavailable"));
+  }, []);
+
+  const nextSpot = useCallback(async () => {
+    setDealing(true);
+    setUserAction(null);
+    try {
+      const sc = await generateScenario();
+      setSpot(describeSpot(sc.history, sc.heroSeat));
+      setStrategy(await getStrategy(sc.history));
+    } finally {
+      setDealing(false);
     }
-    cards.push(...communityCards);
-    return cards;
-  }, [players, communityCards]);
+  }, []);
 
-  const isSingleHandMode = useMemo(() => {
-    const validPlayers = players.filter((p) => p.cards[0] && p.cards[1]);
-    return validPlayers.length === 1;
-  }, [players]);
-
-  const handlePlayerCardClick = (
-    playerIndex: number,
-    cardIndex: 0 | 1,
-    hasCard: boolean,
-  ) => {
-    if (hasCard) {
-      handleCardRemove({ playerIndex, cardIndex });
-    } else {
-      setSelectedPosition({ playerIndex, cardIndex });
+  useEffect(() => {
+    if (modelStatus === "ready") {
+      nextSpot();
     }
-  };
+  }, [modelStatus, nextSpot]);
 
-  const handleCommunityCardClick = (index: number, hasCard: boolean) => {
-    if (hasCard) {
-      handleCardRemove({ type: "community", cardIndex: index });
-    } else {
-      setSelectedPosition({ type: "community", cardIndex: index });
-    }
-  };
+  if (modelStatus === "loading") {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <div className="text-slate-500">Loading GTO strategy model...</div>
+      </div>
+    );
+  }
+
+  if (modelStatus === "unavailable") {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
+        <div className="max-w-lg text-center space-y-3">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+            Strategy model not available
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            The trained model file (
+            <code className="font-mono">/models/holdem_strategy.onnx</code>) was
+            not found. Train it with{" "}
+            <code className="font-mono">solver/scripts/train_holdem.py</code>{" "}
+            and export it with{" "}
+            <code className="font-mono">solver/scripts/export_onnx.py</code>.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0a0a0a]">
-      <main className="container mx-auto px-6 py-4 max-w-[1400px]">
-        <div className="mb-4">
-          <PlayersGrid
-            players={players}
-            odds={odds}
-            selectedPosition={selectedPosition}
-            onCardClick={handlePlayerCardClick}
-            onRemovePlayer={removePlayer}
-          />
+      <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-[1400px]">
+        <div className="mb-4 sm:mb-8 text-center lg:text-left">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+            GTO Trainer — Heads-Up
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            Play spots against a Deep CFR–solved strategy (100 BB, discretized
+            bet sizes). Your action is graded against the equilibrium mix, not
+            an opinion.
+          </p>
         </div>
 
-        <div className="mb-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <CommunityBoard
-              communityCards={communityCards}
-              selectedPosition={selectedPosition}
-              onCardClick={handleCommunityCardClick}
-              onAddPlayer={addPlayer}
-              onClearAll={clearAll}
-              canAddPlayer={players.length < 9}
-            />
+        {!spot || !strategy || dealing ? (
+          <div className="flex min-h-[400px] items-center justify-center">
+            <div className="text-slate-500">Dealing next spot...</div>
           </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 items-start">
-            <div className="hidden sm:block flex-1 min-w-[320px]">
-              <PieChart
-                odds={odds}
-                players={players}
-                isSingleHandMode={isSingleHandMode}
-              />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
+            <div className="lg:col-span-8 flex flex-col gap-4">
+              <GtoTable spot={spot} />
+              {spot.lineDescription.length > 0 && (
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 text-xs sm:text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                  <div className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                    Action so far
+                  </div>
+                  {spot.lineDescription.map((line) => (
+                    <div key={line}>{line}</div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={addPlayer}
-                disabled={players.length >= 9}
-                className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                Add Player
-              </button>
-              <button
-                type="button"
-                onClick={clearAll}
-                className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-md transition-colors whitespace-nowrap"
-              >
-                Clear All
-              </button>
+
+            <div className="lg:col-span-4">
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                  {userAction === null
+                    ? `Your decision (${spot.streetName})`
+                    : "GTO verdict"}
+                </h2>
+
+                {userAction === null ? (
+                  <div className="space-y-2">
+                    {strategy.map(({ action }) => (
+                      <button
+                        key={action}
+                        type="button"
+                        onClick={() => setUserAction(action)}
+                        className="w-full py-2.5 sm:py-3 px-4 bg-slate-100 hover:bg-blue-600 hover:text-white dark:bg-slate-800 dark:hover:bg-blue-600 text-slate-900 dark:text-white text-sm sm:text-base font-medium rounded-lg transition-colors"
+                      >
+                        {spot.actionLabels[action] ?? action}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <GtoFeedback
+                    spot={spot}
+                    strategy={strategy}
+                    userAction={userAction}
+                    onNextSpot={nextSpot}
+                  />
+                )}
+              </div>
             </div>
           </div>
-        </div>
-
-        <div>
-          <CardSelector
-            selectedPosition={selectedPosition}
-            players={players}
-            usedCards={usedCards}
-            onCardSelect={handleCardSelect}
-          />
-        </div>
+        )}
       </main>
     </div>
   );
