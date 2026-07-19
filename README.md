@@ -1,9 +1,6 @@
 # GTO Lab
 
-Learn heads-up No-Limit Hold'em from an actual solver — not opinions, not
-generated text. Every frequency shown in the app comes from a Deep CFR
-(Brown et al. 2019) self-play run, and inference happens entirely in your
-browser via ONNX.
+Learn heads-up No-Limit Hold'em from an actual solver. Every frequency shown in the app comes from a Deep CFR (Brown et al. 2019) self-play run, and inference happens entirely in your browser via ONNX.
 
 ## Features
 

@@ -82,8 +82,7 @@ export default function Trainer() {
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Play spots against a Deep CFR–solved strategy (100 BB, discretized
-            bet sizes). Your action is graded against the equilibrium mix, not
-            an opinion.
+            bet sizes).
           </p>
         </div>
 
