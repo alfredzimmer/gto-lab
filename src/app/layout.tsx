@@ -15,7 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GTO Lab",
+  title: {
+    default: "GTO Lab — solved heads-up poker, in your browser",
+    template: "%s — GTO Lab",
+  },
   description:
     "Heads-up No-Limit Hold'em GTO trainer and range explorer, powered by a Deep CFR solver running in your browser",
 };
