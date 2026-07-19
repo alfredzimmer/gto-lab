@@ -9,8 +9,7 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "test": "jest --testPathIgnorePatterns=\\.perf\\.test\\.ts",
-    "test:perf": "jest \\.perf\\.test\\.ts",
+    "test": "jest",
     "test:watch": "jest --watch",
     "prepare": "node scripts/copy-ort-wasm.mjs"
   },
