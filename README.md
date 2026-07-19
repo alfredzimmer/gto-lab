@@ -7,13 +7,13 @@ browser via ONNX.
 
 ## Features
 
-- **Trainer** (`/`): get dealt real solver-line spots, commit to an
-  action, and see the equilibrium action mix, how far off you were, and
-  the pot-odds math.
-- **Range Explorer** (`/ranges`): the 13×13 starting-hand matrix at any
+- **Range Explorer** (`/`): the 13×13 starting-hand matrix at any
   node of the game tree. Walk the betting line, pick the exact flop /
   turn / river from a card selector, and inspect per-hand mixed
   strategies (all 1,326 combos evaluated live per node).
+- **Trainer** (`/trainer`): get dealt real solver-line spots, commit to
+  an action, and see the equilibrium action mix, how far off you were,
+  and the pot-odds math.
 
 ## Tech Stack
 
