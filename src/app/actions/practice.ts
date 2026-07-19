@@ -2,7 +2,6 @@
 
 import { createDeck, shuffleArray } from "@/lib/deck";
 import { calculateHandStrength } from "@/lib/calculator";
-import { createClient } from "@/lib/supabase/server";
 import type { Card } from "@/lib/types";
 
 export interface PracticeState extends PracticeBoard {
@@ -118,71 +117,4 @@ export async function generatePracticeHand(
     bet,
     id: Math.random().toString(36).substring(7),
   };
-}
-
-export async function savePracticeResult(
-  state: PracticeState,
-  decision: "call" | "fold",
-  result: {
-    equity: number;
-    ev: number;
-    correct: boolean;
-  },
-) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: true, message: "User not logged in" };
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError && profileError.code !== "PGRST116") {
-    return {
-      success: false,
-      error: `Failed to check profile: ${profileError.message}`,
-    };
-  }
-
-  if (!profile) {
-    const { error: createProfileError } = await supabase
-      .from("profiles")
-      .insert({
-        id: user.id,
-        email: user.email,
-      });
-
-    if (createProfileError) {
-      return {
-        success: false,
-        error: `Failed to create user profile: ${createProfileError.message}`,
-      };
-    }
-  }
-
-  const { error } = await supabase.from("practice_logs").insert({
-    user_id: user.id,
-    hero_cards: state.heroHand,
-    board_cards: state.board,
-    villain_hands: state.villainHands,
-    pot: state.pot,
-    bet: state.bet,
-    equity: result.equity,
-    user_decision: decision,
-    is_correct: result.correct,
-    ev: Number(result.ev.toFixed(2)),
-  });
-
-  if (error) {
-    return { success: false, error: error.message };
-  } else {
-    return { success: true };
-  }
 }

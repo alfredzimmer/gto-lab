@@ -3,7 +3,6 @@
 import { useState, useEffect, useTransition, useCallback } from "react";
 import {
   generatePracticeHand,
-  savePracticeResult,
   type PracticeState,
   type PracticeSettings,
 } from "@/app/actions/practice";
@@ -82,18 +81,6 @@ export default function PracticePage() {
     };
 
     setResult(resultData);
-
-    savePracticeResult(gameState, decision, {
-      equity: resultData.equity,
-      ev: resultData.ev,
-      correct: resultData.correct,
-    }).then((res) => {
-      if (res.success) {
-        console.log("Practice result saved to DB");
-      } else {
-        console.error("Failed to save practice result:", res.error);
-      }
-    });
   };
 
   if (loading || !gameState) {

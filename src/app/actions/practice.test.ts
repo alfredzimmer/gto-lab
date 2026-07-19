@@ -1,11 +1,5 @@
-import { generatePracticeHand, savePracticeResult } from "./practice";
-import { createClient } from "@/lib/supabase/server";
+import { generatePracticeHand } from "./practice";
 import { calculateHandStrength } from "@/lib/calculator";
-
-// Mock Supabase
-jest.mock("@/lib/supabase/server", () => ({
-  createClient: jest.fn(),
-}));
 
 describe("Practice Actions", () => {
   describe("generatePracticeHand", () => {
@@ -49,105 +43,6 @@ describe("Practice Actions", () => {
         const equity = (winPercentage + tiePercentage / 2) / 100;
         expect(equity).toBeLessThan(0.75);
       }
-    });
-  });
-
-  describe("savePracticeResult", () => {
-    let mockSupabase: {
-      auth: { getUser: jest.Mock };
-      from: jest.Mock;
-    };
-
-    beforeEach(() => {
-      mockSupabase = {
-        auth: {
-          getUser: jest.fn(),
-        },
-        from: jest.fn(() => ({
-          select: jest.fn(() => ({
-            eq: jest.fn(() => ({
-              single: jest.fn(),
-            })),
-          })),
-          insert: jest.fn(),
-        })),
-      };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-    });
-
-    it("should return success with message if user is not logged in", async () => {
-      mockSupabase.auth.getUser.mockResolvedValue({ data: { user: null } });
-
-      const result = await savePracticeResult(
-        {
-          heroHand: [
-            { rank: "A", suit: "spades" },
-            { rank: "K", suit: "spades" },
-          ],
-          villainHands: [],
-          opponentCount: 1,
-          board: [],
-          pot: 100,
-          bet: 50,
-          id: "test-id",
-        },
-        "call",
-        { equity: 0.5, ev: 10, correct: true },
-      );
-
-      expect(result.success).toBe(true);
-      expect(result.message).toBe("User not logged in");
-    });
-
-    it("should save result if user is logged in", async () => {
-      const user = { id: "user-123", email: "test@example.com" };
-      mockSupabase.auth.getUser.mockResolvedValue({ data: { user } });
-
-      // Mock profile check
-      const mockSelect = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          single: jest
-            .fn()
-            .mockResolvedValue({ data: { id: user.id }, error: null }),
-        }),
-      });
-
-      // Mock insert
-      const mockInsert = jest.fn().mockResolvedValue({ error: null });
-
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === "profiles")
-          return { select: mockSelect, insert: jest.fn() };
-        if (table === "practice_logs") return { insert: mockInsert };
-        return {};
-      });
-
-      const result = await savePracticeResult(
-        {
-          heroHand: [
-            { rank: "A", suit: "spades" },
-            { rank: "K", suit: "spades" },
-          ],
-          villainHands: [],
-          opponentCount: 1,
-          board: [],
-          pot: 100,
-          bet: 50,
-          id: "test-id",
-        },
-        "call",
-        { equity: 0.5, ev: 10, correct: true },
-      );
-
-      expect(result.success).toBe(true);
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          user_id: user.id,
-          user_decision: "call",
-          is_correct: true,
-          ev: 10,
-        }),
-      );
     });
   });
 });

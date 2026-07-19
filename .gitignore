@@ -42,3 +42,5 @@ next-env.d.ts
 
 .vscode/
 .swc/
+# onnxruntime-web wasm runtime (copied from node_modules by prepare script)
+/public/ort/

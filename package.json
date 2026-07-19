@@ -1,7 +1,8 @@
 {
-  "name": "poker-equity-playground",
+  "name": "gto-lab",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.13.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,12 +11,12 @@
     "format": "biome format --write",
     "test": "jest --testPathIgnorePatterns=\\.perf\\.test\\.ts",
     "test:perf": "jest \\.perf\\.test\\.ts",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "prepare": "node scripts/copy-ort-wasm.mjs"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.84.0",
     "next": "16.0.7",
+    "onnxruntime-web": "^1.27.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "recharts": "^3.3.0",
