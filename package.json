@@ -4,8 +4,8 @@
   "private": true,
   "packageManager": "pnpm@11.13.1",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/copy-ort-wasm.mjs && next dev",
+    "build": "node scripts/copy-ort-wasm.mjs && next build",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
