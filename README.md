@@ -14,8 +14,6 @@ browser via ONNX.
   node of the game tree. Walk the betting line, pick the exact flop /
   turn / river from a card selector, and inspect per-hand mixed
   strategies (all 1,326 combos evaluated live per node).
-- **Practice** (`/practice`): multiway pot-odds/EV drills backed by Monte
-  Carlo equity simulation.
 
 ## Tech Stack
 

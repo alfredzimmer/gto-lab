@@ -18,22 +18,3 @@ export interface Card {
   rank: Rank;
   suit: Suit;
 }
-
-export interface Player {
-  id: string;
-  name: string;
-  cards: [Card | null, Card | null];
-}
-
-export interface OddsResult {
-  playerId: string;
-  playerName: string;
-  winPercentage: number;
-  tiePercentage: number;
-}
-
-export interface GameState {
-  players: Player[];
-  communityCards: (Card | null)[];
-  odds: OddsResult[];
-}
