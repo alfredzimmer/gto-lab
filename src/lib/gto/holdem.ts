@@ -351,7 +351,7 @@ export function evaluate7(cards: number[]): number[] {
   return [0, ...[...ranks].sort((a, b) => b - a).slice(0, 5)];
 }
 
-function compareScores(a: number[], b: number[]): number {
+export function compareScores(a: number[], b: number[]): number {
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     const av = a[i] ?? -Infinity;
     const bv = b[i] ?? -Infinity;
