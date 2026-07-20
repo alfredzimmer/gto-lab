@@ -65,6 +65,38 @@ export default function Trainer() {
     }
   }, [modelStatus, nextSpot]);
 
+  const streetPanel = (
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
+        Practice streets
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {STREET_OPTIONS.map((name, s) => {
+          const active = streets.has(s);
+          return (
+            <button
+              key={name}
+              type="button"
+              aria-pressed={active}
+              onClick={() => toggleStreet(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                active
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              {name}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+        Spots are dealt only on the selected streets — changing the selection
+        deals a new spot. At least one stays on.
+      </p>
+    </div>
+  );
+
   if (modelStatus === "loading") {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
@@ -120,6 +152,7 @@ export default function Trainer() {
             >
               Try again
             </button>
+            <div className="w-full max-w-md mt-2">{streetPanel}</div>
           </div>
         ) : !spot || !strategy || dealing ? (
           <div className="flex min-h-[400px] items-center justify-center">
@@ -171,39 +204,11 @@ export default function Trainer() {
                   />
                 )}
               </div>
+
+              <div className="mt-4">{streetPanel}</div>
             </div>
           </div>
         )}
-
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 mt-4 sm:mt-6">
-          <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
-            Practice streets
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {STREET_OPTIONS.map((name, s) => {
-              const active = streets.has(s);
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => toggleStreet(s)}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  {name}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
-            Spots are dealt only on the selected streets — changing the
-            selection deals a new spot. At least one stays on.
-          </p>
-        </div>
       </main>
     </div>
   );
