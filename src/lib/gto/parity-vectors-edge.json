@@ -1,0 +1,229 @@
+{
+  "featureDim": 231,
+  "vectors": [
+    {
+      "history": [
+        0,
+        13,
+        26,
+        39,
+        "b1",
+        "b1"
+      ],
+      "player": 0,
+      "legalActions": [
+        "f",
+        "c",
+        "b0",
+        "b1",
+        "a"
+      ],
+      "legalIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "street": 0,
+      "pot": 24,
+      "toCall": 12,
+      "features": {
+        "0": 1.0,
+        "13": 1.0,
+        "104": 1.0,
+        "108": 0.06,
+        "109": 0.06,
+        "110": 0.97,
+        "114": 1.0,
+        "119": 1.0
+      }
+    },
+    {
+      "history": [
+        0,
+        13,
+        26,
+        39,
+        "b1",
+        "b1",
+        "b1"
+      ],
+      "player": 1,
+      "legalActions": [
+        "f",
+        "c",
+        "a"
+      ],
+      "legalIndices": [
+        0,
+        1,
+        4
+      ],
+      "street": 0,
+      "pot": 72,
+      "toCall": 36,
+      "features": {
+        "26": 1.0,
+        "39": 1.0,
+        "104": 1.0,
+        "108": 0.18,
+        "109": 0.18,
+        "110": 0.91,
+        "114": 1.0,
+        "119": 1.0,
+        "124": 1.0
+      }
+    },
+    {
+      "history": [
+        0,
+        13,
+        26,
+        39,
+        "b1",
+        "b1",
+        "c",
+        4,
+        17,
+        30,
+        "b1",
+        "b1"
+      ],
+      "player": 1,
+      "legalActions": [
+        "f",
+        "c",
+        "a"
+      ],
+      "legalIndices": [
+        0,
+        1,
+        4
+      ],
+      "street": 1,
+      "pot": 216,
+      "toCall": 108,
+      "features": {
+        "26": 1.0,
+        "39": 1.0,
+        "56": 1.0,
+        "69": 1.0,
+        "82": 1.0,
+        "105": 1.0,
+        "108": 0.54,
+        "109": 0.54,
+        "110": 0.73,
+        "114": 1.0,
+        "119": 1.0,
+        "122": 1.0,
+        "144": 1.0,
+        "149": 1.0
+      }
+    },
+    {
+      "history": [
+        12,
+        3,
+        11,
+        24,
+        "c",
+        "c",
+        13,
+        27,
+        41,
+        "c",
+        "c",
+        6,
+        "c",
+        "c",
+        20,
+        "c",
+        "c"
+      ],
+      "terminalReturns": [
+        1.0,
+        -1.0
+      ],
+      "note": "wheel straight (A-2-3-4-5) beats a made pair"
+    },
+    {
+      "history": [
+        25,
+        27,
+        50,
+        15,
+        "c",
+        "c",
+        10,
+        23,
+        26,
+        "c",
+        "c",
+        44,
+        "c",
+        "c",
+        7,
+        "c",
+        "c"
+      ],
+      "terminalReturns": [
+        1.0,
+        -1.0
+      ],
+      "note": "same category (one pair via a paired board), tie broken by kicker"
+    },
+    {
+      "history": [
+        13,
+        27,
+        41,
+        3,
+        "c",
+        "c",
+        12,
+        24,
+        36,
+        "c",
+        "c",
+        48,
+        "c",
+        "c",
+        8,
+        "c",
+        "c"
+      ],
+      "terminalReturns": [
+        0.0,
+        0.0
+      ],
+      "note": "exact split pot: the board's straight plays for both hands"
+    },
+    {
+      "history": [
+        24,
+        37,
+        26,
+        39,
+        "c",
+        "c",
+        6,
+        19,
+        45,
+        "c",
+        "c",
+        11,
+        "c",
+        "c",
+        0,
+        "c",
+        "c"
+      ],
+      "terminalReturns": [
+        1.0,
+        -1.0
+      ],
+      "note": "full house vs. full house: higher trip rank wins, and the winner must choose which of two available trips to use as the trip"
+    }
+  ]
+}

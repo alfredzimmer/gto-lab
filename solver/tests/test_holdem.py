@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from poker_solver.games.hand_eval import evaluate7
-from poker_solver.games.holdem import HoldemGame
+from poker_solver.games.holdem import HoldemGame, _parse
 
 # card = suit * 13 + rank, rank 0 = deuce .. 12 = ace
 A_S, A_H = 12, 25
@@ -104,6 +104,43 @@ class TestHoldemMechanics:
         assert np.array_equal(
             self.game.infoset_features(h3), self.game.infoset_features(h4)
         )
+
+
+def test_pot_after_call_is_always_even():
+    """A street only closes when both players' street contributions match,
+    so by induction both players' total contributions are always equal at
+    the start of every street. That makes `pot_after_call` (used to size
+    the 'b0' 50%-pot bet) always even: it can never land on an exact `.5`
+    tie for banker's-rounding, so the TS port's `bankersRound` and Python's
+    `round()` can never actually disagree on a `.5` input in this game.
+    Verified here over thousands of random lines rather than asserted from
+    reasoning alone -- if this ever fails, either the game's betting
+    structure changed in a way that breaks street-closure symmetry, or a
+    genuine banker's-rounding parity vector needs to be added."""
+    game = HoldemGame()
+    rng = random.Random(11)
+    checked = 0
+
+    for _ in range(3000):
+        h = game.initial_history()
+        while not game.is_terminal(h):
+            if game.is_chance(h):
+                outcomes = game.chance_outcomes(h)
+                probs = [p for _, p in outcomes]
+                a = rng.choices([a for a, _ in outcomes], weights=probs, k=1)[0]
+            else:
+                s = _parse(h)
+                p = s.to_act
+                opp = 1 - p
+                call_amount = s.street_contrib[opp]
+                prior = s.contrib[p] - s.street_contrib[p]
+                pot_after_call = s.contrib[opp] + prior + call_amount
+                assert pot_after_call % 2 == 0, (h, pot_after_call)
+                checked += 1
+                a = rng.choice(game.legal_actions(h))
+            h = game.next_history(h, a)
+
+    assert checked > 1000  # sanity: the loop actually exercised decisions
 
 
 def test_random_playouts_preserve_invariants():

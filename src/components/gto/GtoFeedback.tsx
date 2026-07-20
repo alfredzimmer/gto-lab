@@ -11,7 +11,7 @@ interface GtoFeedbackProps {
   onNextSpot: () => void;
 }
 
-function verdict(userProb: number, bestProb: number) {
+export function verdict(userProb: number, bestProb: number) {
   if (userProb >= bestProb * 0.9 || userProb >= 0.33) {
     return {
       label: "Solid",
