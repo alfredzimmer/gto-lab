@@ -117,12 +117,17 @@ export interface GtoScenario {
 
 /**
  * Deal a practice spot: play a full hand with BOTH seats sampling from
- * the GTO strategy, collect the hero seat's decision points, and pick one
- * uniformly at random to quiz the user on. This makes spot frequencies
- * match what the solved strategy actually reaches (no made-up lines).
+ * the GTO strategy, collect the hero seat's decision points on the
+ * requested streets, and pick one uniformly at random to quiz the user
+ * on. This makes spot frequencies match what the solved strategy
+ * actually reaches (no made-up lines).
  */
-export async function generateScenario(): Promise<GtoScenario> {
-  for (let attempt = 0; attempt < 20; attempt++) {
+export async function generateScenario(
+  streets: ReadonlySet<number> = new Set([0, 1, 2, 3]),
+): Promise<GtoScenario> {
+  // Late streets are reached only when self-play doesn't end the hand
+  // early, so a narrow filter needs more attempts than the default.
+  for (let attempt = 0; attempt < 100; attempt++) {
     const heroSeat = Math.random() < 0.5 ? 0 : 1;
     let h: History = [];
     const heroDecisions: History[] = [];
@@ -132,7 +137,10 @@ export async function generateScenario(): Promise<GtoScenario> {
         h = [...h, sampleChance(h)];
         continue;
       }
-      if (currentPlayer(h) === heroSeat) {
+      if (
+        currentPlayer(h) === heroSeat &&
+        streets.has(parseHistory(h).street)
+      ) {
         heroDecisions.push([...h]);
       }
       const probs = await getStrategy(h);
@@ -145,7 +153,7 @@ export async function generateScenario(): Promise<GtoScenario> {
       return { history: pick, heroSeat };
     }
   }
-  throw new Error("could not generate a scenario with a hero decision");
+  throw new Error("could not reach a hero decision on the selected streets");
 }
 
 // ---- Presentation helpers ----
@@ -183,6 +191,8 @@ export interface SpotInfo {
   toCallBB: number;
   heroStackBB: number;
   villainStackBB: number;
+  /** 0 = Button/SB, 1 = Big Blind */
+  heroSeat: number;
   actionLabels: Record<string, string>;
   lineDescription: string[];
 }
@@ -233,6 +243,7 @@ export function describeSpot(h: History, heroSeat: number): SpotInfo {
     toCallBB: toCall / 2,
     heroStackBB: (200 - s.contrib[p]) / 2,
     villainStackBB: (200 - s.contrib[1 - p]) / 2,
+    heroSeat,
     actionLabels,
     lineDescription: describeLine(h, heroSeat),
   };

@@ -5,6 +5,25 @@ interface GtoTableProps {
   spot: SpotInfo;
 }
 
+/** Seat badge: in heads-up the Button posts the small blind. */
+function PositionBadge({ seat }: { seat: number }) {
+  return seat === 0 ? (
+    <span
+      title="Button / small blind — acts first preflop, last postflop"
+      className="px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wide bg-amber-400 text-slate-900"
+    >
+      BTN
+    </span>
+  ) : (
+    <span
+      title="Big blind — acts last preflop, first postflop"
+      className="px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wide bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+    >
+      BB
+    </span>
+  );
+}
+
 function HiddenCard() {
   return (
     <div className="w-14 h-20 sm:w-20 sm:h-28 bg-white dark:bg-slate-800 rounded-md border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
@@ -30,6 +49,7 @@ export default function GtoTable({ spot }: GtoTableProps) {
           <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">
             Villain · {spot.villainStackBB} BB behind
           </span>
+          <PositionBadge seat={1 - spot.heroSeat} />
         </div>
       </div>
 
@@ -83,6 +103,7 @@ export default function GtoTable({ spot }: GtoTableProps) {
           <span className="text-sm font-medium text-slate-900 dark:text-white">
             Hero · {spot.heroStackBB} BB behind
           </span>
+          <PositionBadge seat={spot.heroSeat} />
         </div>
       </div>
     </div>

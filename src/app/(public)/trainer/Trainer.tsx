@@ -14,12 +14,18 @@ import {
 
 type ModelStatus = "loading" | "ready" | "unavailable";
 
+const STREET_OPTIONS = ["Preflop", "Flop", "Turn", "River"];
+
 export default function Trainer() {
   const [modelStatus, setModelStatus] = useState<ModelStatus>("loading");
   const [spot, setSpot] = useState<SpotInfo | null>(null);
   const [strategy, setStrategy] = useState<ActionProb[] | null>(null);
   const [userAction, setUserAction] = useState<string | null>(null);
   const [dealing, setDealing] = useState(false);
+  const [dealFailed, setDealFailed] = useState(false);
+  const [streets, setStreets] = useState<Set<number>>(
+    () => new Set([0, 1, 2, 3]),
+  );
 
   useEffect(() => {
     loadStrategySession()
@@ -30,13 +36,27 @@ export default function Trainer() {
   const nextSpot = useCallback(async () => {
     setDealing(true);
     setUserAction(null);
+    setDealFailed(false);
     try {
-      const sc = await generateScenario();
+      const sc = await generateScenario(streets);
       setSpot(describeSpot(sc.history, sc.heroSeat));
       setStrategy(await getStrategy(sc.history));
+    } catch {
+      setSpot(null);
+      setDealFailed(true);
     } finally {
       setDealing(false);
     }
+  }, [streets]);
+
+  const toggleStreet = useCallback((s: number) => {
+    setStreets((prev) => {
+      if (prev.has(s) && prev.size === 1) return prev; // keep at least one
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -86,7 +106,22 @@ export default function Trainer() {
           </p>
         </div>
 
-        {!spot || !strategy || dealing ? (
+        {dealFailed ? (
+          <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
+            <div className="text-slate-500 text-sm max-w-md text-center">
+              Self-play didn&apos;t reach a decision on the selected streets —
+              deep streets are rare when hands end early. Try again or widen the
+              selection below.
+            </div>
+            <button
+              type="button"
+              onClick={nextSpot}
+              className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Try again
+            </button>
+          </div>
+        ) : !spot || !strategy || dealing ? (
           <div className="flex min-h-[400px] items-center justify-center">
             <div className="text-slate-500">Dealing next spot...</div>
           </div>
@@ -139,6 +174,36 @@ export default function Trainer() {
             </div>
           </div>
         )}
+
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 mt-4 sm:mt-6">
+          <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
+            Practice streets
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {STREET_OPTIONS.map((name, s) => {
+              const active = streets.has(s);
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => toggleStreet(s)}
+                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+            Spots are dealt only on the selected streets — changing the
+            selection deals a new spot. At least one stays on.
+          </p>
+        </div>
       </main>
     </div>
   );
