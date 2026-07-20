@@ -43,9 +43,6 @@ export default function GtoTable({ spot }: GtoTableProps) {
           <HiddenCard />
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300">
-            V
-          </div>
           <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">
             Villain · {spot.villainStackBB} BB behind
           </span>
@@ -97,9 +94,6 @@ export default function GtoTable({ spot }: GtoTableProps) {
           <CardDisplay card={spot.heroCards[1]} />
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400">
-            YOU
-          </div>
           <span className="text-sm font-medium text-slate-900 dark:text-white">
             Hero · {spot.heroStackBB} BB behind
           </span>
