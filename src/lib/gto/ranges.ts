@@ -122,11 +122,29 @@ export function navigationHistory(tokens: HistoryToken[]): History {
   return [d0, d1, d2, d3, ...tokens];
 }
 
+/** One distinct strategy within a hand class: the combos that share it. */
+export interface ComboGroup {
+  /** how many concrete combos of the class play this exact strategy */
+  count: number;
+  /** a representative combo (two card ints) for display */
+  example: [number, number];
+  /** action probabilities aligned with `actions` */
+  probs: number[];
+}
+
 export interface RangeCell extends HandClass {
   /** live combo count after dead-card removal (0 when fully blocked) */
   combos: number;
   /** avg action probabilities aligned with `actions`; null when blocked */
   probs: number[] | null;
+  /**
+   * Per-combo strategies with suit-isomorphic combos merged (those are
+   * bit-identical after the encoder's suit canonicalization). One group
+   * means the exact suits are irrelevant here; more than one means they
+   * matter -- e.g. a flush draw vs the same ranks off-suit. Empty when the
+   * class is fully blocked by the board.
+   */
+  comboGroups: ComboGroup[];
 }
 
 export interface RangeGrid {
@@ -190,10 +208,11 @@ export async function computeRangeGrid(
   let offset = 0;
   for (const { cls, combos } of rows) {
     if (combos.length === 0) {
-      cells.push({ ...cls, combos: 0, probs: null });
+      cells.push({ ...cls, combos: 0, probs: null, comboGroups: [] });
       continue;
     }
     const avg = indices.map(() => 0);
+    const groups = new Map<string, ComboGroup>();
     for (let k = 0; k < combos.length; k++) {
       const row = logits.subarray(
         (offset + k) * MAX_ACTIONS,
@@ -201,10 +220,17 @@ export async function computeRangeGrid(
       );
       const p = probsFromLogits(row, indices);
       for (let a = 0; a < avg.length; a++) avg[a] += p[a];
+      // Combos with the same strategy (suit-isomorphic ones are bit-identical
+      // after canonicalization) collapse into one group.
+      const key = p.map((v) => v.toFixed(4)).join(",");
+      const g = groups.get(key);
+      if (g) g.count += 1;
+      else groups.set(key, { count: 1, example: combos[k], probs: p });
     }
     offset += combos.length;
     for (let a = 0; a < avg.length; a++) avg[a] /= combos.length;
-    cells.push({ ...cls, combos: combos.length, probs: avg });
+    const comboGroups = [...groups.values()].sort((a, b) => b.count - a.count);
+    cells.push({ ...cls, combos: combos.length, probs: avg, comboGroups });
     for (let a = 0; a < avg.length; a++) aggregate[a] += avg[a] * combos.length;
     aggregateWeight += combos.length;
   }

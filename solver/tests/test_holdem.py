@@ -173,3 +173,67 @@ def test_random_playouts_preserve_invariants():
         r = game.returns(h)
         assert abs(sum(r)) < 1e-9  # zero-sum
         assert abs(r[0]) <= 100.0  # can never win more than the stack
+
+
+def _permute_suits(h, perm):
+    """Relabel every card in history h by suit permutation perm (a bijection
+    of {0,1,2,3}); action strings pass through unchanged."""
+    return tuple(
+        perm[c // 13] * 13 + (c % 13) if isinstance(c, int) else c for c in h
+    )
+
+
+def test_infoset_features_are_suit_isomorphism_invariant():
+    """Relabeling all four suits never changes NLHE strategy, so the
+    canonicalized feature encoding must be identical for a spot and any
+    suit-permuted copy of it. Fuzz over random decision nodes and all 24
+    suit permutations. This is the property the shipped model was missing
+    (it had arbitrary per-suit weights); guarding it keeps the encoder
+    honest independent of any trained checkpoint."""
+    import itertools
+
+    game = HoldemGame()
+    rng = random.Random(23)
+    checked = 0
+
+    for _ in range(400):
+        h = game.initial_history()
+        while not game.is_terminal(h):
+            if game.is_chance(h):
+                outcomes = game.chance_outcomes(h)
+                a = rng.choices(
+                    [a for a, _ in outcomes], [p for _, p in outcomes], k=1
+                )[0]
+            else:
+                base = game.infoset_features(h)
+                for perm in itertools.permutations(range(4)):
+                    permuted = _permute_suits(h, perm)
+                    np.testing.assert_array_equal(
+                        game.infoset_features(permuted), base
+                    )
+                    # Navigation must be suit-blind too.
+                    assert game.legal_actions(permuted) == game.legal_actions(h)
+                checked += 1
+                a = rng.choice(game.legal_actions(h))
+            h = game.next_history(h, a)
+
+    assert checked > 300
+
+
+def test_flush_relevance_is_preserved_after_canonicalization():
+    """Canonicalization discards the arbitrary suit LABEL but must keep the
+    flush RELATIONSHIP: sharing the board's flush suit has to encode
+    differently from holding the same ranks off-suit. (This is exactly what
+    the old model could not act on.)"""
+    game = HoldemGame()
+    # Flop decision for P1 (first to act postflop) after a limp/check.
+    def flop_history(hole):
+        board = (0, 8, 16)  # 2c, Tc, 5d -- a two-tone (club) flop
+        villain = (39, 40)  # 2s, 3s (never enter P1's features)
+        return (villain[0], villain[1], hole[0], hole[1], "c", "c", *board)
+
+    draw = flop_history((12, 10))  # Ac, Qc -- nut flush draw (shares club suit)
+    brick = flop_history((38, 36))  # Ah, Qh -- same ranks, no club
+    assert not np.array_equal(
+        game.infoset_features(draw), game.infoset_features(brick)
+    )

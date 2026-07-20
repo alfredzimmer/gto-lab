@@ -1,5 +1,6 @@
-import { ACTION_INDEX, MAX_ACTIONS } from "./holdem";
+import { ACTION_INDEX, FEATURE_DIM, MAX_ACTIONS } from "./holdem";
 import {
+  type BatchRunner,
   boardCardsOf,
   combosFor,
   computeRangeGrid,
@@ -107,5 +108,74 @@ describe("computeRangeGrid", () => {
     await expect(
       computeRangeGrid(["c", "c"], runner, ACTION_INDEX),
     ).rejects.toThrow("not a decision node");
+  });
+});
+
+describe("combo groups (suit-dependent strategy)", () => {
+  // A runner that maps each distinct feature encoding to a distinct,
+  // non-proportional strategy -> comboGroups.length equals the number of
+  // suit-distinct encodings among a class's combos. Suit-isomorphic combos
+  // share features (post-canonicalization) and therefore collapse.
+  function injectiveRunner(): BatchRunner {
+    const ids = new Map<string, number>();
+    return async (features, rows) => {
+      const out = new Float32Array(rows * MAX_ACTIONS);
+      for (let r = 0; r < rows; r++) {
+        let key = "";
+        for (let i = 0; i < FEATURE_DIM; i++) {
+          if (features[r * FEATURE_DIM + i] !== 0) key += `${i},`;
+        }
+        let u = ids.get(key);
+        if (u === undefined) {
+          u = ids.size;
+          ids.set(key, u);
+        }
+        for (let a = 0; a < MAX_ACTIONS; a++) {
+          // base-8 digits of u, wrapped so every 4 consecutive positions carry
+          // all 12 bits (u < 1326) -- the grid groups over *legal* actions
+          // only, so the discriminator must survive dropping any one position.
+          // Per-position offset keeps distinct encodings non-proportional.
+          out[r * MAX_ACTIONS + a] =
+            ((u >> ((a % 4) * 3)) & 7) + (a + 1) * 0.11 + 0.01;
+        }
+      }
+      return out;
+    };
+  }
+
+  it("splits a suited class by suit on a flush-relevant board", async () => {
+    // Limped pot, flop 2c(0) Tc(8) 5d(16): two clubs -> AKs' club combo makes
+    // a flush draw, so its suits are no longer interchangeable.
+    const grid = await computeRangeGrid(
+      ["c", "c", 0, 8, 16],
+      injectiveRunner(),
+      ACTION_INDEX,
+    );
+    const aks = grid.cells.find((c) => c.label === "AKs");
+    expect(aks?.comboGroups.length).toBeGreaterThan(1);
+    // counts partition the live combos, and groups are sorted most-common first
+    const g = aks?.comboGroups ?? [];
+    expect(g.reduce((s, x) => s + x.count, 0)).toBe(aks?.combos);
+    for (let i = 1; i < g.length; i++) {
+      expect(g[i - 1].count).toBeGreaterThanOrEqual(g[i].count);
+    }
+  });
+
+  it("keeps a single group when the strategy ignores suits", async () => {
+    const uniform = async (_f: Float32Array, rows: number) =>
+      new Float32Array(rows * MAX_ACTIONS).fill(1);
+    const grid = await computeRangeGrid(
+      ["c", "c", 0, 8, 16],
+      uniform,
+      ACTION_INDEX,
+    );
+    for (const cell of grid.cells) {
+      if (cell.combos === 0) {
+        expect(cell.comboGroups).toHaveLength(0);
+        continue;
+      }
+      expect(cell.comboGroups).toHaveLength(1);
+      expect(cell.comboGroups[0].count).toBe(cell.combos);
+    }
   });
 });

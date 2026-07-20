@@ -239,13 +239,45 @@ function actionsByStreet(h: History): string[][] {
   return out;
 }
 
+/**
+ * Suit-isomorphism canonicalization for feature encoding -- exact port of
+ * `_canonical_suit_perm` in solver/poker_solver/games/holdem.py. Relabeling
+ * suits never changes NLHE strategy, so we map the four suits to canonical
+ * labels 0..3 by a rule depending only on the infoset's own cards (acting
+ * player's hole + visible board). Each suit's signature is
+ * (boardRankMask, holeRankMask); suits are ranked by that signature
+ * (descending), tie-broken by original index. Returns perm where
+ * perm[oldSuit] = canonicalSuit. Must stay bit-identical to the Python side.
+ */
+export function canonicalSuitPerm(hole: number[], board: number[]): number[] {
+  const boardMask = [0, 0, 0, 0];
+  const holeMask = [0, 0, 0, 0];
+  for (const c of board) boardMask[Math.floor(c / 13)] |= 1 << (c % 13);
+  for (const c of hole) holeMask[Math.floor(c / 13)] |= 1 << (c % 13);
+  const order = [0, 1, 2, 3].sort((a, b) => {
+    if (boardMask[a] !== boardMask[b]) return boardMask[b] - boardMask[a];
+    if (holeMask[a] !== holeMask[b]) return holeMask[b] - holeMask[a];
+    return a - b;
+  });
+  const perm = [0, 0, 0, 0];
+  order.forEach((old, canonical) => {
+    perm[old] = canonical;
+  });
+  return perm;
+}
+
 export function infosetFeatures(h: History): Float32Array {
   const s = parseHistory(h);
   const p = s.toAct;
   const x = new Float32Array(FEATURE_DIM);
-  x[h[2 * p] as number] = 1;
-  x[h[2 * p + 1] as number] = 1;
-  for (const c of s.board) x[52 + c] = 1;
+  // Canonicalize suits (isomorphism) so flush structure is encoded
+  // consistently across the four suit-symmetric variants of the spot.
+  const hole = [h[2 * p] as number, h[2 * p + 1] as number];
+  const perm = canonicalSuitPerm(hole, s.board);
+  const canon = (c: number) => perm[Math.floor(c / 13)] * 13 + (c % 13);
+  x[canon(hole[0])] = 1;
+  x[canon(hole[1])] = 1;
+  for (const c of s.board) x[52 + canon(c)] = 1;
   x[104 + s.street] = 1;
   const pot = s.contrib[0] + s.contrib[1];
   const toCall = s.streetContrib[1 - p] - s.streetContrib[p];

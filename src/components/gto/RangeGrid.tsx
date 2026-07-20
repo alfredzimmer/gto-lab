@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { RangeCell, RangeGrid as RangeGridData } from "@/lib/gto/ranges";
+import { intToCard } from "@/lib/gto/strategy";
 
 /** action token -> validated palette CSS var (see globals.css) */
 const ACTION_COLORS: Record<string, string> = {
@@ -11,6 +12,61 @@ const ACTION_COLORS: Record<string, string> = {
   b1: "var(--gto-raise-pot)",
   a: "var(--gto-allin)",
 };
+
+const SUIT_SYMBOLS: Record<string, string> = {
+  clubs: "♣",
+  diamonds: "♦",
+  hearts: "♥",
+  spades: "♠",
+};
+
+/** A single card rendered as rank+suit glyph, red for hearts/diamonds. */
+function CardToken({ c }: { c: number }) {
+  const card = intToCard(c);
+  const red = card.suit === "hearts" || card.suit === "diamonds";
+  return (
+    <span
+      className={`font-mono font-semibold ${
+        red
+          ? "text-red-600 dark:text-red-400"
+          : "text-slate-900 dark:text-white"
+      }`}
+    >
+      {card.rank}
+      {SUIT_SYMBOLS[card.suit]}
+    </span>
+  );
+}
+
+/** Horizontal action-mix bar shared by the aggregate, cell, and combo rows. */
+function MixBar({
+  probs,
+  actions,
+  className,
+}: {
+  probs: number[];
+  actions: string[];
+  className: string;
+}) {
+  return (
+    <span
+      className={`flex overflow-hidden ${className}`}
+      style={{ gap: "1px" }}
+    >
+      {probs.map((p, i) =>
+        p > 0.001 ? (
+          <span
+            key={actions[i]}
+            style={{
+              width: `${p * 100}%`,
+              background: ACTION_COLORS[actions[i]],
+            }}
+          />
+        ) : null,
+      )}
+    </span>
+  );
+}
 
 const ACTION_NAMES: Record<string, string> = {
   f: "Fold",
@@ -184,6 +240,62 @@ export default function RangeGrid({ grid }: RangeGridProps) {
               ) : (
                 <div className="text-xs text-slate-500">
                   No live combos — all blocked by the board.
+                </div>
+              )}
+
+              {/* Suit-dependent split: shown only when the exact suits change
+                  the strategy (e.g. combos that make a flush draw). The table
+                  above averages these together; this breaks them back out. */}
+              {detail.comboGroups.length > 1 && (
+                <div className="mt-3">
+                  <div
+                    className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5"
+                    title="These combos differ by suit — e.g. one makes a flush draw with the board, the others don't"
+                  >
+                    By suit
+                  </div>
+                  <div className="space-y-2.5">
+                    {detail.comboGroups.map((g) => (
+                      <div
+                        key={`${g.example[0]}-${g.example[1]}`}
+                        className="space-y-1"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex gap-0.5 text-xs shrink-0">
+                            <CardToken c={g.example[0]} />
+                            <CardToken c={g.example[1]} />
+                          </span>
+                          <span className="text-[10px] text-slate-400 tabular-nums shrink-0">
+                            ×{g.count}
+                          </span>
+                          <MixBar
+                            probs={g.probs}
+                            actions={grid.actions}
+                            className="flex-1 h-2.5 rounded-full"
+                          />
+                        </div>
+                        {/* Exact per-action probabilities, same order/colors as
+                            the bar and the class table above. */}
+                        <div className="flex flex-wrap gap-x-2.5 gap-y-0.5">
+                          {grid.actions.map((a, i) => (
+                            <span
+                              key={a}
+                              title={ACTION_NAMES[a]}
+                              className="inline-flex items-center gap-1 text-[10px] tabular-nums text-slate-500 dark:text-slate-400"
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-[1px] inline-block"
+                                style={{ background: ACTION_COLORS[a] }}
+                              />
+                              <span className="font-medium text-slate-900 dark:text-white">
+                                {(g.probs[i] * 100).toFixed(0)}%
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </>
