@@ -90,14 +90,14 @@ export default function HeroRangeGrid() {
         ))}
       </div>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
+      {/*<p className="mt-3 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
         Unedited output of the shipped model, baked at generation time — the
         same network answers live in the{" "}
         <span className="text-slate-500 dark:text-slate-400">
           Range Explorer
         </span>
         .
-      </p>
+      </p>*/}
     </figure>
   );
 }
