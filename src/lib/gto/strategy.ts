@@ -189,6 +189,16 @@ export interface SpotInfo {
 
 const STREET_NAMES = ["Preflop", "Flop", "Turn", "River"];
 
+/**
+ * Break-even equity when facing a bet. `potBB` is the sum of both
+ * players' contributions, so the outstanding bet is already in it;
+ * calling `toCallBB` makes the final pot (pot + toCall), of which the
+ * caller must win at least toCall / (pot + toCall).
+ */
+export function breakEvenEquity(potBB: number, toCallBB: number): number {
+  return toCallBB / (potBB + toCallBB);
+}
+
 /** Everything the UI needs to render a decision spot, in big blinds. */
 export function describeSpot(h: History, heroSeat: number): SpotInfo {
   const s = parseHistory(h);

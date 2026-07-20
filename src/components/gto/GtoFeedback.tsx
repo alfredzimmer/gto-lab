@@ -1,4 +1,8 @@
-import type { ActionProb, SpotInfo } from "@/lib/gto/strategy";
+import {
+  type ActionProb,
+  type SpotInfo,
+  breakEvenEquity,
+} from "@/lib/gto/strategy";
 
 interface GtoFeedbackProps {
   spot: SpotInfo;
@@ -52,10 +56,8 @@ export default function GtoFeedback({
     strategy.find((s) => s.action === userAction)?.probability ?? 0;
   const v = verdict(userProb, bestProb);
 
-  // Pot-odds math shown when facing a bet: calling C to win (pot + C)
-  // requires equity C / (pot + 2C) of the final pot.
   const requiredEquity =
-    spot.toCallBB > 0 ? spot.toCallBB / (spot.potBB + 2 * spot.toCallBB) : null;
+    spot.toCallBB > 0 ? breakEvenEquity(spot.potBB, spot.toCallBB) : null;
 
   return (
     <div className="space-y-4">
@@ -112,7 +114,7 @@ export default function GtoFeedback({
               {(requiredEquity * 100).toFixed(1)}%
             </span>{" "}
             equity to break even ({spot.toCallBB} ÷ ({spot.potBB} +{" "}
-            {2 * spot.toCallBB})).
+            {spot.toCallBB})).
           </div>
         </div>
       )}
