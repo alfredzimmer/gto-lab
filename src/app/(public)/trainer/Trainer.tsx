@@ -24,7 +24,7 @@ export default function Trainer() {
   const [dealing, setDealing] = useState(false);
   const [dealFailed, setDealFailed] = useState(false);
   const [streets, setStreets] = useState<Set<number>>(
-    () => new Set([0, 1, 2, 3]),
+    () => new Set([1, 2, 3]), // preflop off by default
   );
 
   useEffect(() => {
