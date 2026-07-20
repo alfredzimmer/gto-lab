@@ -8,10 +8,9 @@ export default function HomePage() {
       </h1>
 
       <p className="mt-5 text-base sm:text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-        Game Theory Optimal is the equilibrium strategy of a Texas Hold&apos;em Game.
-        A neural network is trained to approximate it for heads-up No-Limit Hold&apos;em through Deep CFR
-        self-play.
-
+        Game Theory Optimal is the equilibrium strategy of a Texas Hold&apos;em
+        Game. A neural network is trained to approximate it for heads-up
+        No-Limit Hold&apos;em through Deep CFR self-play.
       </p>
 
       <div className="mt-10">
