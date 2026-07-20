@@ -13,9 +13,76 @@ cd solver
 .venv/bin/python -m pytest -v
 pnpm test   # from repo root, frontend parity + trainer-math tests
 .venv/bin/python scripts/lbr_eval.py runs/holdem_v2/checkpoint.pt --hands 2000 --runouts 200 --seed 0
+.venv/bin/python scripts/flush_probe.py   # flush-awareness acceptance gate
 ```
 
-## Test suite status (2026-07-20, commit 41f0d91)
+## Suit canonicalization (flush awareness) -- SHIPPED (holdem_v3, 2026-07-20)
+
+**Status: shipped.** `public/models/holdem_strategy.onnx` is now the
+canonicalized `holdem_v3` checkpoint (iteration 240). The flush probe passes on
+the shipped file (max flush-sensitivity TVD **0.20**, suit-rotation TVD 0), and
+LBR is statistically level with the old flush-blind v2 (see table below) -- so
+v3 keeps v2's overall strength while adding the flush awareness v2 lacked.
+
+Retrain used a deliberately sub-hour budget (`--iters 240 --traversals 1000`,
+~250k traversal-units vs the ~450k of the 300x1500 protocol; actual wall-clock
+63.6 min on MPS). It is therefore flush-aware and level-with-v2 on LBR, but not
+a *converged* solve -- spot checks still show some over-jamming into tiny
+limped pots. A full 300x1500 run would tighten bet-sizing further; the flush
+fix itself is independent of that and already in.
+
+The pre-canonicalization shipped net played flush hands almost identically to
+same-rank bricks. Root cause was the encoder, not the pipeline: the raw
+one-hot-per-card encoding gave the net no suit-symmetry prior, so it had
+arbitrary per-suit weights instead of a flush concept. Measured on the old
+`.onnx` via `scripts/flush_probe.py`'s methodology:
+
+- flush-draw vs same-rank-brick strategy TVD: only ~0.03-0.10;
+- the *identical* made nut flush rotated across the four suits swung up to
+  **0.32 TVD** -- pure per-suit noise, larger than the actual flush signal.
+
+**Fix:** `HoldemGame.infoset_features` (and its bit-identical TS twin
+`infosetFeatures`) now relabel suits into a canonical order
+(`_canonical_suit_perm` / `canonicalSuitPerm`) before one-hot encoding. This
+is suit isomorphism -- a provable NLHE symmetry -- so it adds no human prior,
+pools the four suit-symmetric copies of every spot into one encoding, and
+preserves the flush *relationship* while discarding the meaningless
+clubs-vs-hearts label. `FEATURE_DIM`, action space, and network are unchanged.
+
+Guards added (all green now, model-free):
+- Python `tests/test_holdem.py::test_infoset_features_are_suit_isomorphism_invariant`
+  (features identical under all 24 suit permutations) and
+  `::test_flush_relevance_is_preserved_after_canonicalization`.
+- TS `src/lib/gto/holdem.test.ts` "holdem suit canonicalization" suite (same
+  two properties), plus the regenerated `parity-vectors*.json` still match
+  bit-for-bit, proving the TS port of the canonicalization is exact.
+
+`scripts/flush_probe.py` is the acceptance gate: it wants flush-sensitivity
+TVD >= 0.15 (a heuristic above the ~0.10 pre-fix baseline) and suit-rotation
+TVD == 0 (an encoder invariant, exactly 0 for any model). Passing output on the
+shipped `holdem_v3` model (`python scripts/flush_probe.py`):
+
+```
+FLUSH SENSITIVITY (want max TVD >= 0.15; +aggr = flush hand bets more):
+  TVD=0.1683  aggr -0.157  two-tone 2c Tc 5d, A Q (nut flush draw vs bricks)
+  TVD=0.1045  aggr -0.093  monotone 2c Tc Jc, A K (made nut flush vs no clubs)
+  TVD=0.2006  aggr -0.201  two-tone 7h 8h 2s, A 9 (2nd-nut flush draw vs none)
+SUIT SYMMETRY: TVD=0.000000 for all suit rotations
+max flush-sensitivity TVD = 0.2006 -> PASS ; max suit-rotation TVD = 0 -> PASS
+```
+
+NOTE: passing this probe is necessary, not sufficient -- a heavily
+undertrained net also passes it (flush-aware but bad); LBR remains the quality
+arbiter. Full runbook for a converged retrain: plan file
+`/Users/alfred/.claude/plans/pure-gathering-wilkinson.md`.
+
+## Test suite status (2026-07-20)
+
+- Suit-canonicalization additions: `solver/tests/` now **35 passed** and
+  frontend `pnpm test` **53 passed** (each +2 model-free guards: suit-
+  permutation invariance and flush-relevance preservation, PY + TS).
+
+(Snapshot below is from commit 41f0d91, before the canonicalization work.)
 
 - `solver/tests/`: **33/33 passed**, up from 25 at the start of this
   verification pass -- added `test_exploitability.py` (infoset-key-length
@@ -100,7 +167,8 @@ better). Command: `scripts/lbr_eval.py runs/<checkpoint> --hands 2000 --runouts 
 | `holdem_v2/ckpt_it150.pt` | +1.589 | ±1.399 |
 | `holdem_v2/ckpt_it200.pt` | +0.680 | ±1.272 |
 | `holdem_v2/ckpt_it250.pt` | +1.321 | ±1.256 |
-| `holdem_v2/ckpt_it300.pt` (shipped, = `holdem_v2/checkpoint.pt`) | +1.539 | ±1.117 |
+| `holdem_v2/ckpt_it300.pt` (prev shipped, flush-blind) | +1.539 | ±1.117 |
+| `holdem_v3/checkpoint.pt` (**SHIPPED**, it240, flush-aware, sub-hour budget) | +1.772 | ±0.525 |
 
 **Honest read of this table**: these numbers are noisy and do **not** show
 a clean monotonic improvement with more training -- standard errors are

@@ -10,6 +10,7 @@
 import parity from "./parity-vectors.json";
 import {
   FEATURE_DIM,
+  type History,
   currentPlayer,
   infosetFeatures,
   isTerminal,
@@ -90,5 +91,71 @@ describe("holdem TS/Python parity", () => {
       expect(r[0]).toBeCloseTo(v.terminalReturns[0], 9);
       expect(r[1]).toBeCloseTo(v.terminalReturns[1], 9);
     }
+  });
+});
+
+// Suit-isomorphism canonicalization -- mirrors the Python tests
+// test_infoset_features_are_suit_isomorphism_invariant and
+// test_flush_relevance_is_preserved_after_canonicalization. Model-free.
+
+function permutations4(): number[][] {
+  const out: number[][] = [];
+  const perm: number[] = [];
+  const used = [false, false, false, false];
+  const rec = () => {
+    if (perm.length === 4) {
+      out.push([...perm]);
+      return;
+    }
+    for (let s = 0; s < 4; s++) {
+      if (used[s]) continue;
+      used[s] = true;
+      perm.push(s);
+      rec();
+      perm.pop();
+      used[s] = false;
+    }
+  };
+  rec();
+  return out;
+}
+
+function permuteSuits(h: History, perm: number[]): History {
+  return h.map((c) =>
+    typeof c === "number" ? perm[Math.floor(c / 13)] * 13 + (c % 13) : c,
+  );
+}
+
+describe("holdem suit canonicalization", () => {
+  const PERMS = permutations4();
+
+  it("encodes suit-permuted spots identically (isomorphism invariance)", () => {
+    // Use the parity decision vectors as a bank of real reachable nodes.
+    for (const v of decisionVectors) {
+      const base = infosetFeatures(v.history);
+      for (const perm of PERMS) {
+        const permuted = permuteSuits(v.history, perm);
+        expect(Array.from(infosetFeatures(permuted))).toEqual(Array.from(base));
+        expect(legalActions(permuted)).toEqual(legalActions(v.history));
+      }
+    }
+  });
+
+  it("still distinguishes flush-relevant from irrelevant hands", () => {
+    // Flop decision for P1 after limp/check on a two-tone (club) flop.
+    const board = [0, 8, 16]; // 2c, Tc, 5d
+    const villain = [39, 40]; // 2s, 3s (never enter P1 features)
+    const flop = (hole: number[]): History => [
+      villain[0],
+      villain[1],
+      hole[0],
+      hole[1],
+      "c",
+      "c",
+      ...board,
+    ];
+    const draw = infosetFeatures(flop([12, 10])); // Ac Qc -- nut flush draw
+    const brick = infosetFeatures(flop([38, 36])); // Ah Qh -- same ranks, no club
+    expect(Array.from(draw)).not.toEqual(Array.from(brick));
   });
 });

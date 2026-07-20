@@ -200,6 +200,38 @@ def _aggressive_amounts(s: _State, p: int) -> dict[str, int]:
     return out
 
 
+def _canonical_suit_perm(hole, board) -> list[int]:
+    """Suit-isomorphism canonicalization for feature encoding.
+
+    Relabeling suits never changes NLHE strategy, so we map the four suits
+    to canonical labels 0..3 by a rule that depends only on the infoset's
+    own cards (the acting player's hole + the visible board), never on the
+    arbitrary clubs/diamonds/hearts/spades identity. This collapses the
+    four suit-symmetric copies of every situation into one encoding, so the
+    network sees flush structure consistently instead of relearning it once
+    per suit.
+
+    Each suit gets a signature (board_mask, hole_mask): 13-bit masks of
+    which ranks of that suit appear on the board / in the hand. Suits are
+    ranked by that signature (more/higher board ranks first, then hole
+    ranks), tie-broken by original index. Tied suits are genuinely
+    interchangeable, so the tie-break cannot change the resulting features.
+
+    Returns perm where perm[old_suit] = canonical_suit.
+    """
+    board_mask = [0, 0, 0, 0]
+    hole_mask = [0, 0, 0, 0]
+    for c in board:
+        board_mask[c // 13] |= 1 << (c % 13)
+    for c in hole:
+        hole_mask[c // 13] |= 1 << (c % 13)
+    order = sorted(range(4), key=lambda s: (-board_mask[s], -hole_mask[s], s))
+    perm = [0, 0, 0, 0]
+    for canonical, old in enumerate(order):
+        perm[old] = canonical
+    return perm
+
+
 class HoldemGame(Game):
     num_players = 2
 
@@ -279,10 +311,15 @@ class HoldemGame(Game):
         s = _parse(h)
         p = s.to_act
         x = np.zeros(self.feature_dim, dtype=np.float32)
-        x[h[2 * p]] = 1.0
-        x[h[2 * p + 1]] = 1.0
+        # Canonicalize suits (isomorphism) so flush structure is encoded
+        # consistently across the four suit-symmetric variants of the spot.
+        hole = (h[2 * p], h[2 * p + 1])
+        perm = _canonical_suit_perm(hole, s.board)
+        canon = lambda c: perm[c // 13] * 13 + (c % 13)  # noqa: E731
+        x[canon(hole[0])] = 1.0
+        x[canon(hole[1])] = 1.0
         for c in s.board:
-            x[52 + c] = 1.0
+            x[52 + canon(c)] = 1.0
         x[104 + s.street] = 1.0
         pot = s.contrib[0] + s.contrib[1]
         to_call = s.street_contrib[1 - p] - s.street_contrib[p]
