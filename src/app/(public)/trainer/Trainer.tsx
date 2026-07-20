@@ -111,7 +111,7 @@ export default function Trainer() {
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
                   {userAction === null
                     ? `Your decision (${spot.streetName})`
-                    : "GTO verdict"}
+                    : "GTO"}
                 </h2>
 
                 {userAction === null ? (
