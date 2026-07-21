@@ -65,6 +65,8 @@ export interface ParsedState {
   lastIncrement: number;
   toAct: number;
   folder: number | null;
+  /** Effective (per-player) stack for this hand, in 0.5bb units. */
+  stack: number;
 }
 
 function firstToAct(street: number): number {
@@ -80,7 +82,7 @@ export function aggressiveAmounts(s: ParsedState): Record<string, number> {
   const p = s.toAct;
   const opp = 1 - p;
   const callAmount = s.streetContrib[opp];
-  const stackLeft = STACK - priorContrib(s, p);
+  const stackLeft = s.stack - priorContrib(s, p);
   const potAfterCall = s.contrib[opp] + priorContrib(s, p) + callAmount;
   const minIncrement = Math.max(BIG_BLIND, s.lastIncrement);
 
@@ -105,7 +107,7 @@ export function aggressiveAmounts(s: ParsedState): Record<string, number> {
   return out;
 }
 
-export function parseHistory(h: History): ParsedState {
+export function parseHistory(h: History, stack: number = STACK): ParsedState {
   const s: ParsedState = {
     status: "chance_hole",
     street: 0,
@@ -117,12 +119,13 @@ export function parseHistory(h: History): ParsedState {
     lastIncrement: BIG_BLIND,
     toAct: firstToAct(0),
     folder: null,
+    stack,
   };
   if (h.length < 4) return s;
 
   const streetClosed = (): boolean => {
     if (s.streetContrib[0] !== s.streetContrib[1]) return false;
-    return [0, 1].every((p) => s.acted.has(p) || s.contrib[p] >= STACK);
+    return [0, 1].every((p) => s.acted.has(p) || s.contrib[p] >= s.stack);
   };
 
   let idx = 4;
@@ -139,7 +142,7 @@ export function parseHistory(h: History): ParsedState {
       return s;
     }
 
-    const bettingLive = [0, 1].every((p) => s.contrib[p] < STACK);
+    const bettingLive = [0, 1].every((p) => s.contrib[p] < s.stack);
     if (bettingLive) {
       let closed = false;
       while (idx < n && typeof h[idx] === "string") {
@@ -193,22 +196,22 @@ export function parseHistory(h: History): ParsedState {
   }
 }
 
-export function isChance(h: History): boolean {
-  const st = parseHistory(h).status;
+export function isChance(h: History, stack: number = STACK): boolean {
+  const st = parseHistory(h, stack).status;
   return st === "chance_hole" || st === "chance_board";
 }
 
-export function isTerminal(h: History): boolean {
-  const st = parseHistory(h).status;
+export function isTerminal(h: History, stack: number = STACK): boolean {
+  const st = parseHistory(h, stack).status;
   return st === "fold" || st === "showdown";
 }
 
-export function currentPlayer(h: History): number {
-  return parseHistory(h).toAct;
+export function currentPlayer(h: History, stack: number = STACK): number {
+  return parseHistory(h, stack).toAct;
 }
 
-export function legalActions(h: History): string[] {
-  const s = parseHistory(h);
+export function legalActions(h: History, stack: number = STACK): string[] {
+  const s = parseHistory(h, stack);
   const p = s.toAct;
   const facing = s.streetContrib[1 - p] > s.streetContrib[p];
   const actions: string[] = [];
@@ -218,8 +221,11 @@ export function legalActions(h: History): string[] {
   return actions;
 }
 
-export function legalActionIndices(h: History): number[] {
-  return legalActions(h).map((a) => ACTION_INDEX[a]);
+export function legalActionIndices(
+  h: History,
+  stack: number = STACK,
+): number[] {
+  return legalActions(h, stack).map((a) => ACTION_INDEX[a]);
 }
 
 function actionsByStreet(h: History): string[][] {
@@ -266,8 +272,11 @@ export function canonicalSuitPerm(hole: number[], board: number[]): number[] {
   return perm;
 }
 
-export function infosetFeatures(h: History): Float32Array {
-  const s = parseHistory(h);
+export function infosetFeatures(
+  h: History,
+  stack: number = STACK,
+): Float32Array {
+  const s = parseHistory(h, stack);
   const p = s.toAct;
   const x = new Float32Array(FEATURE_DIM);
   // Canonicalize suits (isomorphism) so flush structure is encoded
@@ -281,9 +290,9 @@ export function infosetFeatures(h: History): Float32Array {
   x[104 + s.street] = 1;
   const pot = s.contrib[0] + s.contrib[1];
   const toCall = s.streetContrib[1 - p] - s.streetContrib[p];
-  x[108] = pot / (2 * STACK);
-  x[109] = toCall / STACK;
-  x[110] = (STACK - s.contrib[p]) / STACK;
+  x[108] = pot / (2 * s.stack);
+  x[109] = toCall / s.stack;
+  x[110] = (s.stack - s.contrib[p]) / s.stack;
 
   const base = 111;
   const streets = actionsByStreet(h);
@@ -393,8 +402,11 @@ export function compareScores(a: number[], b: number[]): number {
 }
 
 /** Terminal utilities in big blinds, (player0, player1). */
-export function terminalReturns(h: History): [number, number] {
-  const s = parseHistory(h);
+export function terminalReturns(
+  h: History,
+  stack: number = STACK,
+): [number, number] {
+  const s = parseHistory(h, stack);
   if (s.status === "fold") {
     const loser = s.folder as number;
     const lost = s.contrib[loser] / 2;

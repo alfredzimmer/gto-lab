@@ -16,8 +16,10 @@ import {
   FEATURE_DIM,
   type History,
   MAX_ACTIONS,
+  STACK,
   aggressiveAmounts,
   currentPlayer,
+  evaluate7,
   infosetFeatures,
   isChance,
   isTerminal,
@@ -71,14 +73,17 @@ export async function runStrategyBatch(
 }
 
 /** GTO action distribution at a decision node (legal actions only). */
-export async function getStrategy(h: History): Promise<ActionProb[]> {
+export async function getStrategy(
+  h: History,
+  stack: number = STACK,
+): Promise<ActionProb[]> {
   const { ort, session } = await loadStrategySession();
-  const features = infosetFeatures(h);
+  const features = infosetFeatures(h, stack);
   const input = new ort.Tensor("float32", features, [1, FEATURE_DIM]);
   const output = await session.run({ features: input });
   const logits = output.action_logits.data as Float32Array;
 
-  const actions = legalActions(h);
+  const actions = legalActions(h, stack);
   const clipped = actions.map((a) => Math.max(logits[ACTION_INDEX[a]], 0));
   const total = clipped.reduce((s, v) => s + v, 0);
   if (total <= 0) {
@@ -156,6 +161,34 @@ export async function generateScenario(
   throw new Error("could not reach a hero decision on the selected streets");
 }
 
+/**
+ * Live-play driver: advance a hand through chance nodes (dealing holes and
+ * board) and bot turns (sampling from the GTO strategy over its range) until
+ * either the hero must act or the hand is terminal. This is the same self-play
+ * loop as generateScenario, except the hero seat's actions are supplied by the
+ * caller instead of sampled. Callers must handle an already-terminal return
+ * (e.g. the bot folds the small blind before the hero ever acts) and, after a
+ * hero action, call this again — it also runs the board out after an all-in
+ * straight to showdown.
+ */
+export async function advanceHand(
+  h: History,
+  heroSeat: number,
+  stack: number = STACK,
+): Promise<History> {
+  let history = h;
+  while (!isTerminal(history, stack)) {
+    if (isChance(history, stack)) {
+      history = [...history, sampleChance(history)];
+      continue;
+    }
+    if (currentPlayer(history, stack) === heroSeat) break;
+    const probs = await getStrategy(history, stack);
+    history = [...history, sampleFrom(probs)];
+  }
+  return history;
+}
+
 // ---- Presentation helpers ----
 
 const RANK_BY_INDEX: Rank[] = [
@@ -180,6 +213,28 @@ export function intToCard(c: number): Card {
     rank: RANK_BY_INDEX[c % 13],
     suit: SUIT_BY_INDEX[Math.floor(c / 13)],
   };
+}
+
+const HAND_CATEGORY_NAMES = [
+  "High card",
+  "Pair",
+  "Two pair",
+  "Three of a kind",
+  "Straight",
+  "Flush",
+  "Full house",
+  "Four of a kind",
+  "Straight flush",
+];
+
+/**
+ * Name the best five-card hand from a set of card ints (2 hole + up to 5
+ * board). Needs the full 7 to be meaningful — returns null with fewer, so
+ * callers can skip the label until the river/showdown.
+ */
+export function handRankName(cards: number[]): string | null {
+  if (cards.length < 7) return null;
+  return HAND_CATEGORY_NAMES[evaluate7(cards)[0]] ?? "High card";
 }
 
 export interface SpotInfo {
@@ -210,8 +265,12 @@ export function breakEvenEquity(potBB: number, toCallBB: number): number {
 }
 
 /** Everything the UI needs to render a decision spot, in big blinds. */
-export function describeSpot(h: History, heroSeat: number): SpotInfo {
-  const s = parseHistory(h);
+export function describeSpot(
+  h: History,
+  heroSeat: number,
+  stack: number = STACK,
+): SpotInfo {
+  const s = parseHistory(h, stack);
   const p = s.toAct;
   const toCall = s.streetContrib[1 - p] - s.streetContrib[p];
   const amounts = aggressiveAmounts(s);
@@ -241,16 +300,20 @@ export function describeSpot(h: History, heroSeat: number): SpotInfo {
     streetName: STREET_NAMES[s.street],
     potBB: (s.contrib[0] + s.contrib[1]) / 2,
     toCallBB: toCall / 2,
-    heroStackBB: (200 - s.contrib[p]) / 2,
-    villainStackBB: (200 - s.contrib[1 - p]) / 2,
+    heroStackBB: (stack - s.contrib[p]) / 2,
+    villainStackBB: (stack - s.contrib[1 - p]) / 2,
     heroSeat,
     actionLabels,
-    lineDescription: describeLine(h, heroSeat),
+    lineDescription: describeLine(h, heroSeat, stack),
   };
 }
 
 /** Human-readable action line, e.g. "Preflop: You raise to 3 BB, Villain calls". */
-function describeLine(h: History, heroSeat: number): string[] {
+function describeLine(
+  h: History,
+  heroSeat: number,
+  stack: number = STACK,
+): string[] {
   const lines: string[] = [];
   let current: string[] = [];
   let street = 0;
@@ -274,7 +337,7 @@ function describeLine(h: History, heroSeat: number): string[] {
       }
       continue;
     }
-    const s = parseHistory(replay);
+    const s = parseHistory(replay, stack);
     const actor = s.toAct === heroSeat ? "You" : "Villain";
     const toCall = s.streetContrib[1 - s.toAct] - s.streetContrib[s.toAct];
     const amounts = aggressiveAmounts(s);

@@ -9,6 +9,7 @@ export default function Header() {
   const navItems = [
     { name: "Ranges", href: "/ranges" },
     { name: "Trainer", href: "/trainer" },
+    { name: "Play", href: "/play" },
   ];
 
   return (
