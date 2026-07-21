@@ -269,7 +269,7 @@ export default function Play() {
       <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-[1400px]">
         <div className="mb-4 sm:mb-8 text-center lg:text-left">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            Play — Heads-Up vs. the Bot
+            Heads-Up vs. the Bot
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Full hands against the Deep CFR–solved strategy. Both reload to 100

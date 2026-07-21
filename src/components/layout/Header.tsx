@@ -42,10 +42,6 @@ export default function Header() {
             })}
           </nav>
         </div>
-
-        <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 hidden sm:block">
-          Solved with Deep CFR · runs in your browser
-        </span>
       </div>
     </header>
   );

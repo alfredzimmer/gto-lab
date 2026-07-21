@@ -160,7 +160,7 @@ export default function RangeExplorer() {
         <div className="mb-4 sm:mb-6 flex flex-wrap items-end justify-between gap-2">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-              GTO Range Explorer
+              GTO Ranges
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               Walk the action tree; the grid shows the solved strategy for every

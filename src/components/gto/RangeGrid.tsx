@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { RangeCell, RangeGrid as RangeGridData } from "@/lib/gto/ranges";
+import type {
+  ComboStrategy,
+  RangeCell,
+  RangeGrid as RangeGridData,
+} from "@/lib/gto/ranges";
 import { intToCard } from "@/lib/gto/strategy";
 
 /** action token -> validated palette CSS var (see globals.css) */
@@ -75,6 +79,72 @@ const ACTION_NAMES: Record<string, string> = {
   b1: "Bet/Raise pot",
   a: "All-in",
 };
+
+/**
+ * Per-combo strategy breakdown for one hand class. Shown only when the exact
+ * suits change the play (a flush draw bets where the off-suit combos check);
+ * lists every live combo separately. Returns null when all combos play the
+ * same — then the class table above already says everything.
+ */
+function ComboBreakdown({
+  combos,
+  actions,
+}: {
+  combos: ComboStrategy[];
+  actions: string[];
+}) {
+  const distinct = new Set(
+    combos.map((c) => c.probs.map((v) => v.toFixed(4)).join(",")),
+  ).size;
+  if (distinct < 2) return null;
+
+  return (
+    <div className="mt-3">
+      <div
+        className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5"
+        title="These combos play differently because of their exact suits — e.g. one makes a flush draw with the board and the others don't"
+      >
+        Combos
+      </div>
+      <div className="space-y-2.5">
+        {combos.map((c) => (
+          <div key={`${c.cards[0]}-${c.cards[1]}`} className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex gap-0.5 text-xs shrink-0">
+                <CardToken c={c.cards[0]} />
+                <CardToken c={c.cards[1]} />
+              </span>
+              <MixBar
+                probs={c.probs}
+                actions={actions}
+                className="flex-1 h-2.5 rounded-full"
+              />
+            </div>
+            {/* Exact per-action probabilities, same order/colors as the bar
+                and the class table above. */}
+            <div className="flex flex-wrap gap-x-2.5 gap-y-0.5">
+              {actions.map((a, i) => (
+                <span
+                  key={a}
+                  title={ACTION_NAMES[a]}
+                  className="inline-flex items-center gap-1 text-[10px] tabular-nums text-slate-500 dark:text-slate-400"
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-[1px] inline-block"
+                    style={{ background: ACTION_COLORS[a] }}
+                  />
+                  <span className="font-medium text-slate-900 dark:text-white">
+                    {(c.probs[i] * 100).toFixed(0)}%
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface RangeGridProps {
   grid: RangeGridData;
@@ -243,61 +313,10 @@ export default function RangeGrid({ grid }: RangeGridProps) {
                 </div>
               )}
 
-              {/* Suit-dependent split: shown only when the exact suits change
-                  the strategy (e.g. combos that make a flush draw). The table
-                  above averages these together; this breaks them back out. */}
-              {detail.comboGroups.length > 1 && (
-                <div className="mt-3">
-                  <div
-                    className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5"
-                    title="These combos differ by suit — e.g. one makes a flush draw with the board, the others don't"
-                  >
-                    By suit
-                  </div>
-                  <div className="space-y-2.5">
-                    {detail.comboGroups.map((g) => (
-                      <div
-                        key={`${g.example[0]}-${g.example[1]}`}
-                        className="space-y-1"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex gap-0.5 text-xs shrink-0">
-                            <CardToken c={g.example[0]} />
-                            <CardToken c={g.example[1]} />
-                          </span>
-                          <span className="text-[10px] text-slate-400 tabular-nums shrink-0">
-                            ×{g.count}
-                          </span>
-                          <MixBar
-                            probs={g.probs}
-                            actions={grid.actions}
-                            className="flex-1 h-2.5 rounded-full"
-                          />
-                        </div>
-                        {/* Exact per-action probabilities, same order/colors as
-                            the bar and the class table above. */}
-                        <div className="flex flex-wrap gap-x-2.5 gap-y-0.5">
-                          {grid.actions.map((a, i) => (
-                            <span
-                              key={a}
-                              title={ACTION_NAMES[a]}
-                              className="inline-flex items-center gap-1 text-[10px] tabular-nums text-slate-500 dark:text-slate-400"
-                            >
-                              <span
-                                className="w-1.5 h-1.5 rounded-[1px] inline-block"
-                                style={{ background: ACTION_COLORS[a] }}
-                              />
-                              <span className="font-medium text-slate-900 dark:text-white">
-                                {(g.probs[i] * 100).toFixed(0)}%
-                              </span>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <ComboBreakdown
+                combos={detail.comboList}
+                actions={grid.actions}
+              />
             </>
           )}
         </div>

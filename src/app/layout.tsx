@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s — GTO Lab",
   },
   description:
-    "Heads-up No-Limit Hold'em GTO trainer and range explorer, powered by a Deep CFR solver running in your browser",
+    "Heads-up No-Limit Hold'em GTO trainer and range viewer, powered by a Deep CFR solver running in your browser",
 };
 
 export default function RootLayout({

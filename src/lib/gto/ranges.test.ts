@@ -111,11 +111,19 @@ describe("computeRangeGrid", () => {
   });
 });
 
-describe("combo groups (suit-dependent strategy)", () => {
+describe("per-combo strategy (suit-dependent play)", () => {
+  /** distinct strategies among a cell's live combos (suit-isomorphic combos
+      are bit-identical after canonicalization, so they count once). */
+  function distinctStrategies(cell: { comboList: { probs: number[] }[] }) {
+    return new Set(
+      cell.comboList.map((c) => c.probs.map((v) => v.toFixed(4)).join(",")),
+    ).size;
+  }
+
   // A runner that maps each distinct feature encoding to a distinct,
-  // non-proportional strategy -> comboGroups.length equals the number of
-  // suit-distinct encodings among a class's combos. Suit-isomorphic combos
-  // share features (post-canonicalization) and therefore collapse.
+  // non-proportional strategy -> the number of distinct strategies equals the
+  // number of suit-distinct encodings among a class's combos. Suit-isomorphic
+  // combos share features (post-canonicalization) and therefore match.
   function injectiveRunner(): BatchRunner {
     const ids = new Map<string, number>();
     return async (features, rows) => {
@@ -152,16 +160,12 @@ describe("combo groups (suit-dependent strategy)", () => {
       ACTION_INDEX,
     );
     const aks = grid.cells.find((c) => c.label === "AKs");
-    expect(aks?.comboGroups.length).toBeGreaterThan(1);
-    // counts partition the live combos, and groups are sorted most-common first
-    const g = aks?.comboGroups ?? [];
-    expect(g.reduce((s, x) => s + x.count, 0)).toBe(aks?.combos);
-    for (let i = 1; i < g.length; i++) {
-      expect(g[i - 1].count).toBeGreaterThanOrEqual(g[i].count);
-    }
+    // one entry per live combo, and the exact suits change the play
+    expect(aks?.comboList).toHaveLength(aks?.combos ?? -1);
+    expect(distinctStrategies(aks ?? { comboList: [] })).toBeGreaterThan(1);
   });
 
-  it("keeps a single group when the strategy ignores suits", async () => {
+  it("gives every combo the same strategy when suits are ignored", async () => {
     const uniform = async (_f: Float32Array, rows: number) =>
       new Float32Array(rows * MAX_ACTIONS).fill(1);
     const grid = await computeRangeGrid(
@@ -171,11 +175,12 @@ describe("combo groups (suit-dependent strategy)", () => {
     );
     for (const cell of grid.cells) {
       if (cell.combos === 0) {
-        expect(cell.comboGroups).toHaveLength(0);
+        expect(cell.comboList).toHaveLength(0);
         continue;
       }
-      expect(cell.comboGroups).toHaveLength(1);
-      expect(cell.comboGroups[0].count).toBe(cell.combos);
+      // one entry per live combo, all playing the single shared strategy
+      expect(cell.comboList).toHaveLength(cell.combos);
+      expect(distinctStrategies(cell)).toBe(1);
     }
   });
 });

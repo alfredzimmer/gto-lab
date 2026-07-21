@@ -94,7 +94,7 @@ export default function HeroRangeGrid() {
         Unedited output of the shipped model, baked at generation time — the
         same network answers live in the{" "}
         <span className="text-slate-500 dark:text-slate-400">
-          Range Explorer
+          GTO Ranges
         </span>
         .
       </p>*/}
