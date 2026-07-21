@@ -26,6 +26,11 @@ export default function HomePage() {
         </a>
         .
       </p>
+
+      <p className="mt-3 text-xs text-slate-400 dark:text-slate-500 text-balance">
+        Your game session is stored locally in your browser.
+        This site uses no cookies and no third-party tracking.
+      </p>
     </main>
   );
 }
