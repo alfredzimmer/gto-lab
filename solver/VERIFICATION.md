@@ -16,20 +16,28 @@ pnpm test   # from repo root, frontend parity + trainer-math tests
 .venv/bin/python scripts/flush_probe.py   # flush-awareness acceptance gate
 ```
 
-## Suit canonicalization (flush awareness) -- SHIPPED (holdem_v3, 2026-07-20)
+## Suit canonicalization (flush awareness) -- SHIPPED (holdem_v4 it100, 2026-07-20)
 
-**Status: shipped.** `public/models/holdem_strategy.onnx` is now the
-canonicalized `holdem_v3` checkpoint (iteration 240). The flush probe passes on
-the shipped file (max flush-sensitivity TVD **0.20**, suit-rotation TVD 0), and
-LBR is statistically level with the old flush-blind v2 (see table below) -- so
-v3 keeps v2's overall strength while adding the flush awareness v2 lacked.
+**Status: shipped.** `public/models/holdem_strategy.onnx` is the canonicalized
+`holdem_v4` checkpoint, **iteration 100**, selected by a multi-seed LBR sweep
+(see "Hold'em LBR results"). It is flush-aware (flush probe PASS, max
+sensitivity TVD **0.17**, suit-rotation 0), and by 5-seed-averaged LBR it is
+**+0.67 +/- 0.20 bb/hand -- far less exploitable than the previous shipped
+holdem_v3 it240 (+2.26 +/- 0.20, a 5.6-sigma / 1.59 bb/hand improvement)**.
+It also fixes the over-jamming (#4): on a limped-pot flop it bets ~1/2-pot and
+jams ~3%, where v3 jammed 20-40% -- exactly the leak LBR punished.
 
-Retrain used a deliberately sub-hour budget (`--iters 240 --traversals 1000`,
-~250k traversal-units vs the ~450k of the 300x1500 protocol; actual wall-clock
-63.6 min on MPS). It is therefore flush-aware and level-with-v2 on LBR, but not
-a *converged* solve -- spot checks still show some over-jamming into tiny
-limped pots. A full 300x1500 run would tighten bet-sizing further; the flush
-fix itself is independent of that and already in.
+Why an early (it100) checkpoint and not the it400 endpoint: the full
+`holdem_v4` run (`--iters 400 --traversals 1500 --batch 1024`, buffers
+600k/1.2M, ~3h on MPS) showed **exploitability does NOT decrease with more
+training** -- multi-seed LBR wanders in a ~0.7-1.6 band with a mild
+non-monotonic hump (it100 +0.67, it300 +1.56, it400 +0.94), i.e. the Deep CFR
+average strategy converges (low-noise strategy-TVD keeps shrinking) but to an
+approximate fixed point whose exploitability is capped by function-
+approximation error. More iterations don't help; it100 is the best-measured
+point that is also flush-aware. Lesson recorded: single-seed LBR is too noisy
+(seed spread ~±1 bb/hand > within-seed SE) to rank checkpoints -- always
+average across seeds.
 
 The pre-canonicalization shipped net played flush hands almost identically to
 same-rank bricks. Root cause was the encoder, not the pipeline: the raw
@@ -60,15 +68,16 @@ Guards added (all green now, model-free):
 `scripts/flush_probe.py` is the acceptance gate: it wants flush-sensitivity
 TVD >= 0.15 (a heuristic above the ~0.10 pre-fix baseline) and suit-rotation
 TVD == 0 (an encoder invariant, exactly 0 for any model). Passing output on the
-shipped `holdem_v3` model (`python scripts/flush_probe.py`):
+shipped `holdem_v4 it100` model (`python scripts/flush_probe.py`) -- note the
++aggr deltas are now positive (flush hands bet MORE, the intuitive direction):
 
 ```
 FLUSH SENSITIVITY (want max TVD >= 0.15; +aggr = flush hand bets more):
-  TVD=0.1683  aggr -0.157  two-tone 2c Tc 5d, A Q (nut flush draw vs bricks)
-  TVD=0.1045  aggr -0.093  monotone 2c Tc Jc, A K (made nut flush vs no clubs)
-  TVD=0.2006  aggr -0.201  two-tone 7h 8h 2s, A 9 (2nd-nut flush draw vs none)
+  TVD=0.1118  aggr +0.106  two-tone 2c Tc 5d, A Q (nut flush draw vs bricks)
+  TVD=0.1733  aggr +0.173  monotone 2c Tc Jc, A K (made nut flush vs no clubs)
+  TVD=0.1480  aggr +0.148  two-tone 7h 8h 2s, A 9 (2nd-nut flush draw vs none)
 SUIT SYMMETRY: TVD=0.000000 for all suit rotations
-max flush-sensitivity TVD = 0.2006 -> PASS ; max suit-rotation TVD = 0 -> PASS
+max flush-sensitivity TVD = 0.1733 -> PASS ; max suit-rotation TVD = 0 -> PASS
 ```
 
 NOTE: passing this probe is necessary, not sufficient -- a heavily
@@ -167,8 +176,34 @@ better). Command: `scripts/lbr_eval.py runs/<checkpoint> --hands 2000 --runouts 
 | `holdem_v2/ckpt_it150.pt` | +1.589 | ±1.399 |
 | `holdem_v2/ckpt_it200.pt` | +0.680 | ±1.272 |
 | `holdem_v2/ckpt_it250.pt` | +1.321 | ±1.256 |
-| `holdem_v2/ckpt_it300.pt` (prev shipped, flush-blind) | +1.539 | ±1.117 |
-| `holdem_v3/checkpoint.pt` (**SHIPPED**, it240, flush-aware, sub-hour budget) | +1.772 | ±0.525 |
+| `holdem_v2/ckpt_it300.pt` (flush-blind) | +1.539 | ±1.117 |
+| `holdem_v3/checkpoint.pt` (it240, single seed -- see multi-seed below) | +1.772 | ±0.525 |
+
+### Multi-seed sweep (2026-07-20, 5 seeds x 2000 hands = 10k hands/checkpoint)
+
+Single-seed LBR turned out too noisy to rank checkpoints: the *same* it100
+checkpoint scored +0.44/+1.44/+0.62 across seeds 0/1/2 (spread ~1 bb/hand,
+far above the within-seed ±0.5 SE). Averaging over 5 seeds gives honest
+error bars (SE across seeds). Command: `lbr_eval.py <ckpt> --hands 2000
+--runouts 200 --seed {0..4}`.
+
+| checkpoint | mean LBR (±SE over 5 seeds) | note |
+|---|---|---|
+| `holdem_v4/ckpt_it50.pt`  | +0.93 ± 0.21 | |
+| `holdem_v4/ckpt_it100.pt` | **+0.67 ± 0.20** | **SHIPPED** (flush PASS 0.17) |
+| `holdem_v4/ckpt_it200.pt` | +1.32 ± 0.17 | |
+| `holdem_v4/ckpt_it300.pt` | +1.56 ± 0.31 | |
+| `holdem_v4/ckpt_it400.pt` | +0.94 ± 0.17 | flush FAIL (0.145) |
+| `holdem_v3/checkpoint.pt` (prev shipped, it240) | +2.26 ± 0.20 | superseded |
+
+Reads: (1) v4 it100 is **5.6 sigma** less exploitable than the prev-shipped
+v3 (+0.67 vs +2.26). (2) Exploitability does **not** fall with more training
+-- it wanders 0.7-1.6 with a mild non-monotonic hump (it100 best, it300
+worst, it400 recovers), the signature of hitting this net/abstraction's
+function-approximation floor. The strategy still *converges* (strategy-TVD
+between snapshots keeps shrinking), just to an approximate, error-capped
+fixed point. To push exploitability below ~0.7 needs a bigger net / finer
+bet grid / engineered features, not more iterations.
 
 **Honest read of this table**: these numbers are noisy and do **not** show
 a clean monotonic improvement with more training -- standard errors are

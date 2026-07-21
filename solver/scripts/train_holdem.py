@@ -145,15 +145,17 @@ def main():
             )
             record["eval"] = evaluate(solver, game, args.eval_hands, seed=args.seed + it)
 
-            torch.save(
-                {
-                    "iteration": solver.iteration,
-                    "args": vars(args),
-                    "advantage_nets": [n.state_dict() for n in solver.advantage_nets],
-                    "strategy_net": solver.strategy_net.state_dict(),
-                },
-                out / "checkpoint.pt",
-            )
+            snapshot = {
+                "iteration": solver.iteration,
+                "args": vars(args),
+                "advantage_nets": [n.state_dict() for n in solver.advantage_nets],
+                "strategy_net": solver.strategy_net.state_dict(),
+            }
+            torch.save(snapshot, out / "checkpoint.pt")
+            # Keep every eval snapshot too, so the best one can be picked by
+            # paired LBR afterwards (LBR is noisy and non-monotonic across
+            # checkpoints -- see solver/VERIFICATION.md).
+            torch.save(snapshot, out / f"ckpt_it{it}.pt")
             torch.save(
                 {
                     "advantage": [m.__dict__ for m in solver.advantage_memories],
