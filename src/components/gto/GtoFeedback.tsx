@@ -8,6 +8,10 @@ interface GtoFeedbackProps {
   spot: SpotInfo;
   strategy: ActionProb[];
   userAction: string;
+  /** Hero's showdown equity vs the villain's range, or null if not (yet) known. */
+  equity: number | null;
+  /** True while the equity estimate is being computed. */
+  equityPending: boolean;
   onNextSpot: () => void;
 }
 
@@ -48,6 +52,8 @@ export default function GtoFeedback({
   spot,
   strategy,
   userAction,
+  equity,
+  equityPending,
   onNextSpot,
 }: GtoFeedbackProps) {
   const sorted = [...strategy].sort((a, b) => b.probability - a.probability);
@@ -105,17 +111,32 @@ export default function GtoFeedback({
 
       {requiredEquity !== null && (
         <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 text-xs sm:text-sm text-slate-600 dark:text-slate-400 space-y-1">
-          <div className="font-medium text-slate-900 dark:text-white">
-            Pot odds
-          </div>
           <div>
-            Calling {spot.toCallBB} BB into {spot.potBB} BB means you need{" "}
+            Pot odds is{" "}
             <span className="font-mono">
               {(requiredEquity * 100).toFixed(1)}%
-            </span>{" "}
-            equity to break even ({spot.toCallBB} ÷ ({spot.potBB} +{" "}
-            {spot.toCallBB})).
+            </span>
+            .
           </div>
+          {equityPending ? (
+            <div className="text-slate-400 dark:text-slate-500">
+              Estimating your calling equity…
+            </div>
+          ) : equity !== null ? (
+            <div>
+              Calling equity is{" "}
+              <span
+                className={`font-mono font-semibold ${
+                  equity >= requiredEquity
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-red-600 dark:text-red-400"
+                }`}
+              >
+                {(equity * 100).toFixed(1)}%
+              </span>
+              .
+            </div>
+          ) : null}
         </div>
       )}
 

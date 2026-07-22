@@ -13,7 +13,9 @@ import type * as OrtTypes from "onnxruntime-web";
 import type { Card, Rank, Suit } from "@/lib/types";
 import {
   ACTION_INDEX,
+  ALL_IN,
   FEATURE_DIM,
+  FOLD,
   type History,
   MAX_ACTIONS,
   STACK,
@@ -23,6 +25,7 @@ import {
   infosetFeatures,
   isChance,
   isTerminal,
+  legalActionIndices,
   legalActions,
   parseHistory,
 } from "./holdem";
@@ -120,45 +123,74 @@ export interface GtoScenario {
   heroSeat: number;
 }
 
+/** GTO distribution with fold/all-in removed and the rest renormalized. */
+function continuingProbs(probs: ActionProb[]): ActionProb[] {
+  // Actions that keep the hand alive into the next street: never fold, and
+  // never commit all-in. A fold ends the hand; a called all-in runs the board
+  // out to showdown — either way there is no later decision, so these are
+  // exactly the lines that could never have reached a deeper street anyway.
+  // CHECK_CALL is always legal (holdem.ts), so this set is never empty, and
+  // bet tokens here are strictly below all-in by construction.
+  const cont = probs.filter(
+    ({ action }) => action !== FOLD && action !== ALL_IN,
+  );
+  const total = cont.reduce((sum, { probability }) => sum + probability, 0);
+  return total > 0
+    ? cont.map((p) => ({ ...p, probability: p.probability / total }))
+    : cont.map((p) => ({ ...p, probability: 1 / cont.length }));
+}
+
 /**
- * Deal a practice spot: play a full hand with BOTH seats sampling from
- * the GTO strategy, collect the hero seat's decision points on the
- * requested streets, and pick one uniformly at random to quiz the user
- * on. This makes spot frequencies match what the solved strategy
- * actually reaches (no made-up lines).
+ * Deal a practice spot deterministically for a chosen street. Rather than
+ * dealing random hands and hoping one lands on the wanted street (which skews
+ * hard toward preflop — reached every hand — over the rare river), pick the
+ * target street uniformly among the selected ones, then BUILD a single hand
+ * that reaches it:
+ *
+ *   1. Drive the hand forward with BOTH seats sampling GTO-but-continuing
+ *      actions (never fold, never all-in), so it can't end before the target
+ *      street. This always terminates — the raise cap forces a closing
+ *      check/call — and only ever plays real solved lines.
+ *   2. On the target street, let the villain act with the full GTO strategy
+ *      until it is the hero's turn, then quiz on that decision. The hero
+ *      always gets a decision on the target street before it can close.
+ *
+ * Each selected street is shown with probability 1/N (1/4, 1/3, 1/2, or 1),
+ * in one pass with no rejection loop.
  */
 export async function generateScenario(
   streets: ReadonlySet<number> = new Set([0, 1, 2, 3]),
 ): Promise<GtoScenario> {
-  // Late streets are reached only when self-play doesn't end the hand
-  // early, so a narrow filter needs more attempts than the default.
-  for (let attempt = 0; attempt < 100; attempt++) {
-    const heroSeat = Math.random() < 0.5 ? 0 : 1;
-    let h: History = [];
-    const heroDecisions: History[] = [];
-
-    while (!isTerminal(h)) {
-      if (isChance(h)) {
-        h = [...h, sampleChance(h)];
-        continue;
-      }
-      if (
-        currentPlayer(h) === heroSeat &&
-        streets.has(parseHistory(h).street)
-      ) {
-        heroDecisions.push([...h]);
-      }
-      const probs = await getStrategy(h);
-      h = [...h, sampleFrom(probs)];
-    }
-
-    if (heroDecisions.length > 0) {
-      const pick =
-        heroDecisions[Math.floor(Math.random() * heroDecisions.length)];
-      return { history: pick, heroSeat };
-    }
+  const selected = [...streets];
+  if (selected.length === 0) {
+    throw new Error("no practice streets selected");
   }
-  throw new Error("could not reach a hero decision on the selected streets");
+  const targetStreet = selected[Math.floor(Math.random() * selected.length)];
+  const heroSeat = Math.random() < 0.5 ? 0 : 1;
+
+  let h: History = [];
+
+  // Phase 1 — advance to the target street without letting the hand end.
+  for (;;) {
+    if (isChance(h)) {
+      h = [...h, sampleChance(h)];
+      continue;
+    }
+    if (parseHistory(h).street >= targetStreet) break;
+    h = [...h, sampleFrom(continuingProbs(await getStrategy(h)))];
+  }
+
+  // Phase 2 — reach the hero's decision on the target street.
+  for (;;) {
+    if (isChance(h)) {
+      h = [...h, sampleChance(h)];
+      continue;
+    }
+    if (currentPlayer(h) === heroSeat) {
+      return { history: h, heroSeat };
+    }
+    h = [...h, sampleFrom(await getStrategy(h))];
+  }
 }
 
 /**
@@ -187,6 +219,169 @@ export async function advanceHand(
     history = [...history, sampleFrom(probs)];
   }
   return history;
+}
+
+// ---- Equity estimation ----
+
+/** Opponent hole-card pairs not blocked by the given dead cards. */
+function candidatePairs(dead: Set<number>): [number, number][] {
+  const pairs: [number, number][] = [];
+  for (let a = 0; a < 52; a++) {
+    if (dead.has(a)) continue;
+    for (let b = a + 1; b < 52; b++) {
+      if (!dead.has(b)) pairs.push([a, b]);
+    }
+  }
+  return pairs;
+}
+
+/**
+ * Bayes-update the posterior weights over the villain's hole cards after the
+ * villain takes `action` at decision node `node`. For every candidate pair we
+ * substitute it into the villain's hole slots, query the strategy net, and
+ * multiply the weight by the probability that hand assigns to the action taken
+ * — mirroring the net's clip-and-normalize (uniform fallback when a row has no
+ * positive legal logit). This is exactly the range model the solver's LBR
+ * exploiter uses (poker_solver/eval/lbr.py, RangeTracker.observe_action).
+ */
+async function bayesUpdate(
+  node: History,
+  action: string,
+  villainSeat: number,
+  pairs: [number, number][],
+  weights: Float32Array,
+  stack: number,
+): Promise<void> {
+  const legalIdx = legalActionIndices(node, stack);
+  const takenIdx = ACTION_INDEX[action];
+  const base = 2 * villainSeat;
+  const feats = new Float32Array(pairs.length * FEATURE_DIM);
+  for (let r = 0; r < pairs.length; r++) {
+    const hyp = node.slice() as History;
+    hyp[base] = pairs[r][0];
+    hyp[base + 1] = pairs[r][1];
+    feats.set(infosetFeatures(hyp, stack), r * FEATURE_DIM);
+  }
+  const logits = await runStrategyBatch(feats, pairs.length);
+  for (let r = 0; r < pairs.length; r++) {
+    const off = r * MAX_ACTIONS;
+    let total = 0;
+    for (const idx of legalIdx) total += Math.max(logits[off + idx], 0);
+    weights[r] *=
+      total > 0
+        ? Math.max(logits[off + takenIdx], 0) / total
+        : 1 / legalIdx.length;
+  }
+}
+
+/** Posterior weights over villain pairs, from every villain action in `h`. */
+async function villainRange(
+  h: History,
+  villainSeat: number,
+  pairs: [number, number][],
+  stack: number,
+): Promise<Float32Array> {
+  const weights = new Float32Array(pairs.length).fill(1);
+  let prefix: History = h.slice(0, 4);
+  for (let i = 4; i < h.length; i++) {
+    const tok = h[i];
+    if (
+      typeof tok === "string" &&
+      currentPlayer(prefix, stack) === villainSeat
+    ) {
+      await bayesUpdate(prefix, tok, villainSeat, pairs, weights, stack);
+    }
+    prefix = [...prefix, tok];
+  }
+  return weights;
+}
+
+/** Monte-Carlo showdown equity of the hero hand vs the weighted villain range. */
+function equityVsRange(
+  heroCards: [number, number],
+  board: number[],
+  pairs: [number, number][],
+  weights: Float32Array,
+  samples: number,
+): number {
+  const cum = new Float64Array(weights.length);
+  let running = 0;
+  for (let i = 0; i < weights.length; i++) {
+    running += weights[i];
+    cum[i] = running;
+  }
+  const totalW = running;
+  if (totalW <= 0) return Number.NaN;
+
+  const need = 5 - board.length;
+  let score = 0;
+  for (let s = 0; s < samples; s++) {
+    // Weighted pick of a villain pair (binary search over cumulative weights).
+    const target = Math.random() * totalW;
+    let lo = 0;
+    let hi = cum.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (cum[mid] < target) lo = mid + 1;
+      else hi = mid;
+    }
+    const [va, vb] = pairs[lo];
+
+    const dead = new Set<number>([
+      heroCards[0],
+      heroCards[1],
+      va,
+      vb,
+      ...board,
+    ]);
+    const full = board.slice();
+    while (full.length < board.length + need) {
+      const c = Math.floor(Math.random() * 52);
+      if (!dead.has(c)) {
+        dead.add(c);
+        full.push(c);
+      }
+    }
+    const heroRank = evaluate7([heroCards[0], heroCards[1], ...full]);
+    const villRank = evaluate7([va, vb, ...full]);
+    if (heroRank > villRank) score += 1;
+    else if (heroRank === villRank) score += 0.5;
+  }
+  return score / samples;
+}
+
+/**
+ * The hero's showdown equity against the villain's range at decision node `h`.
+ * The range is the strategy net's own Bayesian posterior given every action
+ * the villain has taken (so a hand that has bet is weighted toward value/bluff
+ * combos the net would bet), and equity is estimated by Monte-Carlo board
+ * runouts. Returns a probability in [0, 1]. This is the same quantity the LBR
+ * exploiter reasons about, surfaced for the trainer's pot-odds comparison.
+ */
+export async function heroEquityVsRange(
+  h: History,
+  heroSeat: number,
+  stack: number = STACK,
+  samples = 2000,
+): Promise<number> {
+  const s = parseHistory(h, stack);
+  const heroCards: [number, number] = [
+    h[2 * heroSeat] as number,
+    h[2 * heroSeat + 1] as number,
+  ];
+  const board = s.board.slice();
+  const dead = new Set<number>([heroCards[0], heroCards[1], ...board]);
+  const pairs = candidatePairs(dead);
+
+  const weights = await villainRange(h, 1 - heroSeat, pairs, stack);
+  let eq = equityVsRange(heroCards, board, pairs, weights, samples);
+  if (Number.isNaN(eq)) {
+    // Degenerate posterior (every combo ruled out) — fall back to the
+    // blocker-only uniform range so we still return a sane number.
+    weights.fill(1);
+    eq = equityVsRange(heroCards, board, pairs, weights, samples);
+  }
+  return eq;
 }
 
 // ---- Presentation helpers ----
