@@ -9,7 +9,8 @@ Fixed rules:
   Player 1 = big blind.
 - Streets: preflop, flop (3 cards), turn, river.
 - Actions: fold 'f', check/call 'c', bet/raise 'b0' (50% pot), 'b1'
-  (100% pot), all-in 'a'. Pot fraction is of the pot AFTER calling.
+  (100% pot), 'b2' (200% pot overbet), all-in 'a'. Pot fraction is of
+  the pot AFTER calling.
   At most 3 aggressive actions (bet/raise) per street; after the cap
   only fold/call remain. Raises follow a simplified min-raise rule
   (raise increment >= max(1bb, last increment), clamped up), and any
@@ -41,8 +42,8 @@ from poker_solver.games.hand_eval import evaluate7
 FOLD = "f"
 CHECK_CALL = "c"
 ALL_IN = "a"
-BET_FRACTIONS = {"b0": 0.5, "b1": 1.0}
-ACTION_ORDER = [FOLD, CHECK_CALL, "b0", "b1", ALL_IN]
+BET_FRACTIONS = {"b0": 0.5, "b1": 1.0, "b2": 2.0}
+ACTION_ORDER = [FOLD, CHECK_CALL, "b0", "b1", "b2", ALL_IN]
 
 STACK = 200  # chip units of 0.5bb => 100bb
 SMALL_BLIND = 1

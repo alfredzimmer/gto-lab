@@ -283,7 +283,13 @@ export function describeSpot(
     const added = (amount - s.streetContrib[p]) / 2;
     const verb = toCall > 0 ? "Raise to" : "Bet";
     const sizeName =
-      token === "a" ? "All-in" : token === "b0" ? "½ pot" : "pot";
+      token === "a"
+        ? "All-in"
+        : token === "b0"
+          ? "½ pot"
+          : token === "b1"
+            ? "pot"
+            : "2× pot";
     actionLabels[token] =
       token === "a"
         ? `All-in (${added} BB)`

@@ -28,7 +28,7 @@ body {
 
 /* GTO range-grid action colors.
    Validated with the dataviz palette checker (both modes):
-   fold/call are categorical slots; the three raise sizes are an ordinal
+   fold/call are categorical slots; the four raise sizes are an ordinal
    one-hue red ramp (escalating commitment reads as darkening).
    Light-mode sub-3:1 contrast on call/raise-light is relieved by the
    legend + per-cell tooltip, per the palette relief rule. */
@@ -37,6 +37,7 @@ body {
   --gto-call: #1baf7a;
   --gto-raise-half: #ef8e8d;
   --gto-raise-pot: #e34948;
+  --gto-raise-over: #bf3433;
   --gto-allin: #9c1f1e;
   --gto-blocked: #e2e8f0;
 }
@@ -47,6 +48,7 @@ body {
     --gto-call: #199e70;
     --gto-raise-half: #dc6462;
     --gto-raise-pot: #c74a49;
+    --gto-raise-over: #b03635;
     --gto-allin: #992322;
     --gto-blocked: #1e293b;
   }

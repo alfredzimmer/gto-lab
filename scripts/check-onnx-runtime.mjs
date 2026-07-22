@@ -36,7 +36,7 @@ const PARITY_PATH = `${ROOT}src/lib/gto/parity-vectors.json`;
 
 const parity = JSON.parse(readFileSync(PARITY_PATH, "utf8"));
 const FEATURE_DIM = parity.featureDim;
-const MAX_ACTIONS = 5; // ACTION_ORDER.length in holdem.ts / holdem.py
+const MAX_ACTIONS = 6; // ACTION_ORDER.length in holdem.ts / holdem.py
 
 function toDenseFeatures(features) {
   const dense = new Float32Array(FEATURE_DIM);
