@@ -20,6 +20,7 @@ import {
   MAX_ACTIONS,
   STACK,
   aggressiveAmounts,
+  compareScores,
   currentPlayer,
   evaluate7,
   infosetFeatures,
@@ -224,7 +225,7 @@ export async function advanceHand(
 // ---- Equity estimation ----
 
 /** Opponent hole-card pairs not blocked by the given dead cards. */
-function candidatePairs(dead: Set<number>): [number, number][] {
+export function candidatePairs(dead: Set<number>): [number, number][] {
   const pairs: [number, number][] = [];
   for (let a = 0; a < 52; a++) {
     if (dead.has(a)) continue;
@@ -297,7 +298,7 @@ async function villainRange(
 }
 
 /** Monte-Carlo showdown equity of the hero hand vs the weighted villain range. */
-function equityVsRange(
+export function equityVsRange(
   heroCards: [number, number],
   board: number[],
   pairs: [number, number][],
@@ -342,10 +343,15 @@ function equityVsRange(
         full.push(c);
       }
     }
-    const heroRank = evaluate7([heroCards[0], heroCards[1], ...full]);
-    const villRank = evaluate7([va, vb, ...full]);
-    if (heroRank > villRank) score += 1;
-    else if (heroRank === villRank) score += 0.5;
+    // evaluate7 returns a [category, ...tiebreakers] tuple that must be
+    // compared lexicographically — NOT with `>`/`===`, which coerce the arrays
+    // to strings and give nonsense (e.g. a pair of 6s "beating" a pair of Ks).
+    const cmp = compareScores(
+      evaluate7([heroCards[0], heroCards[1], ...full]),
+      evaluate7([va, vb, ...full]),
+    );
+    if (cmp > 0) score += 1;
+    else if (cmp === 0) score += 0.5;
   }
   return score / samples;
 }
