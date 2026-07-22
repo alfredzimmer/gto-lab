@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import GtoFeedback from "@/components/gto/GtoFeedback";
 import GtoTable from "@/components/gto/GtoTable";
 import {
   type ActionProb,
+  type GtoScenario,
   type SpotInfo,
   describeSpot,
   generateScenario,
   getStrategy,
+  heroEquityVsRange,
   loadStrategySession,
 } from "@/lib/gto/strategy";
 
@@ -21,11 +23,15 @@ export default function Trainer() {
   const [spot, setSpot] = useState<SpotInfo | null>(null);
   const [strategy, setStrategy] = useState<ActionProb[] | null>(null);
   const [userAction, setUserAction] = useState<string | null>(null);
+  const [equity, setEquity] = useState<number | null>(null);
+  const [equityPending, setEquityPending] = useState(false);
   const [dealing, setDealing] = useState(false);
   const [dealFailed, setDealFailed] = useState(false);
   const [streets, setStreets] = useState<Set<number>>(
     () => new Set([1, 2, 3]), // preflop off by default
   );
+  // Guards async equity results so a newer deal supersedes a stale one.
+  const reqIdRef = useRef(0);
 
   useEffect(() => {
     loadStrategySession()
@@ -37,16 +43,42 @@ export default function Trainer() {
     setDealing(true);
     setUserAction(null);
     setDealFailed(false);
+    setEquity(null);
+    setEquityPending(false);
+    const reqId = ++reqIdRef.current;
+
+    let dealt: { sc: GtoScenario; info: SpotInfo } | null = null;
     try {
       const sc = await generateScenario(streets);
-      setSpot(describeSpot(sc.history, sc.heroSeat));
+      if (reqIdRef.current !== reqId) return; // superseded by a newer deal
+      const info = describeSpot(sc.history, sc.heroSeat);
+      setSpot(info);
       setStrategy(await getStrategy(sc.history));
+      dealt = { sc, info };
     } catch {
+      if (reqIdRef.current !== reqId) return;
       setSpot(null);
       setDealFailed(true);
     } finally {
-      setDealing(false);
+      if (reqIdRef.current === reqId) setDealing(false);
     }
+
+    // The spot is on screen now — use the user's thinking time to estimate the
+    // hero's equity vs the villain's (net-implied) range in the background, so
+    // the pot-odds box already has it the moment the user acts. Only meaningful
+    // facing a bet; a newer deal cancels a stale result via reqId.
+    if (!dealt || dealt.info.toCallBB <= 0) return;
+    setEquityPending(true);
+    heroEquityVsRange(dealt.sc.history, dealt.sc.heroSeat)
+      .then((e) => {
+        if (reqIdRef.current === reqId) setEquity(e);
+      })
+      .catch(() => {
+        if (reqIdRef.current === reqId) setEquity(null);
+      })
+      .finally(() => {
+        if (reqIdRef.current === reqId) setEquityPending(false);
+      });
   }, [streets]);
 
   const toggleStreet = useCallback((s: number) => {
@@ -200,6 +232,8 @@ export default function Trainer() {
                     spot={spot}
                     strategy={strategy}
                     userAction={userAction}
+                    equity={equity}
+                    equityPending={equityPending}
                     onNextSpot={nextSpot}
                   />
                 )}
