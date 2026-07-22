@@ -19,10 +19,10 @@ export type History = HistoryToken[];
 export const FOLD = "f";
 export const CHECK_CALL = "c";
 export const ALL_IN = "a";
-export const ACTION_ORDER = ["f", "c", "b0", "b1", "a"] as const;
+export const ACTION_ORDER = ["f", "c", "b0", "b1", "b2", "a"] as const;
 export type ActionToken = (typeof ACTION_ORDER)[number];
 
-const BET_FRACTIONS: Record<string, number> = { b0: 0.5, b1: 1.0 };
+const BET_FRACTIONS: Record<string, number> = { b0: 0.5, b1: 1.0, b2: 2.0 };
 export const STACK = 200;
 const SMALL_BLIND = 1;
 const BIG_BLIND = 2;

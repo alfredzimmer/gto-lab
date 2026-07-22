@@ -71,18 +71,18 @@ describe("computeRangeGrid", () => {
 
     const grid = await computeRangeGrid([], runner, ACTION_INDEX);
     expect(grid.actingSeat).toBe(0);
-    expect(grid.actions).toEqual(["f", "c", "b0", "b1", "a"]);
+    expect(grid.actions).toEqual(["f", "c", "b0", "b1", "b2", "a"]);
     expect(grid.cells).toHaveLength(169);
 
     for (const cell of grid.cells) {
       expect(cell.combos).toBeGreaterThan(0);
       for (const p of cell.probs ?? []) {
-        expect(p).toBeCloseTo(1 / 5, 9);
+        expect(p).toBeCloseTo(1 / 6, 9);
       }
-      expect(cell.probs).toHaveLength(5);
+      expect(cell.probs).toHaveLength(6);
     }
     for (const p of grid.aggregate) {
-      expect(p).toBeCloseTo(1 / 5, 9);
+      expect(p).toBeCloseTo(1 / 6, 9);
     }
   });
 

@@ -24,7 +24,7 @@ from poker_solver.cfr.networks import InfosetNet  # noqa: E402
 from poker_solver.games.holdem import HoldemGame  # noqa: E402
 from export_onnx import sample_infoset_features  # noqa: E402
 
-MAX_ACTIONS = 5
+MAX_ACTIONS = 6
 
 
 def test_onnx_export_matches_pytorch_on_real_infosets(tmp_path):

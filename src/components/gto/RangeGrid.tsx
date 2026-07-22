@@ -14,6 +14,7 @@ const ACTION_COLORS: Record<string, string> = {
   c: "var(--gto-call)",
   b0: "var(--gto-raise-half)",
   b1: "var(--gto-raise-pot)",
+  b2: "var(--gto-raise-over)",
   a: "var(--gto-allin)",
 };
 
@@ -77,6 +78,7 @@ const ACTION_NAMES: Record<string, string> = {
   c: "Check / Call",
   b0: "Bet/Raise ½ pot",
   b1: "Bet/Raise pot",
+  b2: "Bet/Raise 2× pot",
   a: "All-in",
 };
 

@@ -48,7 +48,7 @@ class TestHoldemMechanics:
 
     def test_blinds_and_first_action(self):
         assert self.game.current_player(HOLE) == 0  # button/SB first preflop
-        assert self.game.legal_actions(HOLE) == ["f", "c", "b0", "b1", "a"]
+        assert self.game.legal_actions(HOLE) == ["f", "c", "b0", "b1", "b2", "a"]
 
     def test_bb_has_option_after_limp(self):
         h = HOLE + ("c",)
@@ -85,8 +85,26 @@ class TestHoldemMechanics:
     def test_raise_cap_limits_aggression_per_street(self):
         h = HOLE + ("b0", "b0", "b0")  # 3 aggressive actions
         legal = self.game.legal_actions(h)
-        assert "b0" not in legal and "b1" not in legal
+        assert "b0" not in legal and "b1" not in legal and "b2" not in legal
         assert "a" in legal  # all-in is always available with chips behind
+
+    def test_overbet_sizes_and_all_in_collapse(self):
+        # Preflop: pot after SB calls = 4 units, so b2 = call 2 + 8 = 10
+        # units = a 5bb open (vs 6 units = 3bb for the b1 pot raise).
+        from poker_solver.games.holdem import _aggressive_amounts
+
+        s = _parse(HOLE)
+        amounts = _aggressive_amounts(s, 0)
+        assert amounts["b1"] == 6
+        assert amounts["b2"] == 10
+
+        # After b2/b2 the pot is 100 units; a third 2x-pot raise would be
+        # 250 >= the 200 stack, so b2 collapses into all-in while the
+        # smaller fractions survive.
+        h = HOLE + ("b2", "b2")
+        legal = self.game.legal_actions(h)
+        assert "b0" in legal and "b1" in legal
+        assert "b2" not in legal and "a" in legal
 
     def test_infoset_hides_opponent_cards(self):
         h1 = (A_S, A_H, K_S, K_D, "c")

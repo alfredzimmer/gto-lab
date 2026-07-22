@@ -56,7 +56,7 @@ function actionLabelsFor(tokens: HistoryToken[]): Record<string, string> {
     labels[token] =
       token === "a"
         ? `All-in (${(amount - s.streetContrib[p]) / 2} BB)`
-        : `${verb} ${amount / 2} BB (${token === "b0" ? "½ pot" : "pot"})`;
+        : `${verb} ${amount / 2} BB (${token === "b0" ? "½ pot" : token === "b1" ? "pot" : "2× pot"})`;
   }
   return labels;
 }
