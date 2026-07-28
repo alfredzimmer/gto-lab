@@ -217,12 +217,14 @@ export default function RangeGrid({ grid }: RangeGridProps) {
           ))}
         </div>
 
-        {/* Legend — identity is never color-alone */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+        {/* Legend — identity is never color-alone. Below `sm` the two
+            breakdown tables carry the same swatches, so only the one label
+            they lack needs repeating here. */}
+        <div className="flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1 mt-2 sm:mt-3">
           {grid.actions.map((a) => (
             <span
               key={a}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400"
             >
               <span
                 className="w-3 h-3 rounded-[2px] inline-block"
@@ -231,7 +233,7 @@ export default function RangeGrid({ grid }: RangeGridProps) {
               {ACTION_NAMES[a]}
             </span>
           ))}
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+          <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-600 dark:text-slate-400">
             <span
               className="w-3 h-3 rounded-[2px] inline-block"
               style={{ background: "var(--gto-blocked)" }}
@@ -241,57 +243,61 @@ export default function RangeGrid({ grid }: RangeGridProps) {
         </div>
       </div>
 
-      {/* Hover / tap detail panel — the tooltip layer plus table view */}
+      {/* Hover / tap detail panel — the tooltip layer plus table view.
+          Range total and the focused cell sit side by side on a phone; the
+          panel is a single narrow column from `lg` up. */}
       <div className="lg:w-56 shrink-0">
-        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 p-3 sticky top-20">
-          <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
-            Range total
+        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 p-2.5 sm:p-3 sticky top-16 lg:top-20 grid grid-cols-2 lg:grid-cols-1 gap-x-4">
+          <div>
+            <div className="text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5 sm:mb-2">
+              Range total
+            </div>
+            <div
+              className="h-2 sm:h-3 flex rounded-full overflow-hidden mb-1"
+              style={{ gap: "1px" }}
+            >
+              {grid.aggregate.map((p, i) =>
+                p > 0.001 ? (
+                  <div
+                    key={grid.actions[i]}
+                    style={{
+                      width: `${p * 100}%`,
+                      background: ACTION_COLORS[grid.actions[i]],
+                    }}
+                  />
+                ) : null,
+              )}
+            </div>
+            <table className="w-full text-[11px] sm:text-xs lg:mb-3">
+              <tbody>
+                {grid.actions.map((a, i) => (
+                  <tr key={a}>
+                    <td className="py-0.5 text-slate-600 dark:text-slate-400">
+                      <span
+                        className="w-2 h-2 rounded-[2px] inline-block mr-1.5"
+                        style={{ background: ACTION_COLORS[a] }}
+                      />
+                      {ACTION_NAMES[a]}
+                    </td>
+                    <td className="py-0.5 text-right font-mono tabular-nums text-slate-900 dark:text-white">
+                      {(grid.aggregate[i] * 100).toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div
-            className="h-3 flex rounded-full overflow-hidden mb-1"
-            style={{ gap: "1px" }}
-          >
-            {grid.aggregate.map((p, i) =>
-              p > 0.001 ? (
-                <div
-                  key={grid.actions[i]}
-                  style={{
-                    width: `${p * 100}%`,
-                    background: ACTION_COLORS[grid.actions[i]],
-                  }}
-                />
-              ) : null,
-            )}
-          </div>
-          <table className="w-full text-xs mb-3">
-            <tbody>
-              {grid.actions.map((a, i) => (
-                <tr key={a}>
-                  <td className="py-0.5 text-slate-600 dark:text-slate-400">
-                    <span
-                      className="w-2 h-2 rounded-[2px] inline-block mr-1.5"
-                      style={{ background: ACTION_COLORS[a] }}
-                    />
-                    {ACTION_NAMES[a]}
-                  </td>
-                  <td className="py-0.5 text-right font-mono text-slate-900 dark:text-white">
-                    {(grid.aggregate[i] * 100).toFixed(1)}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
 
           {detail && (
-            <>
-              <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+            <div>
+              <div className="text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5 sm:mb-1">
                 {detail.label}
                 <span className="ml-2 normal-case font-normal">
                   {detail.combos} combo{detail.combos === 1 ? "" : "s"}
                 </span>
               </div>
               {detail.probs ? (
-                <table className="w-full text-xs">
+                <table className="w-full text-[11px] sm:text-xs">
                   <tbody>
                     {grid.actions.map((a, i) => (
                       <tr key={a}>
@@ -302,7 +308,7 @@ export default function RangeGrid({ grid }: RangeGridProps) {
                           />
                           {ACTION_NAMES[a]}
                         </td>
-                        <td className="py-0.5 text-right font-mono text-slate-900 dark:text-white">
+                        <td className="py-0.5 text-right font-mono tabular-nums text-slate-900 dark:text-white">
                           {((detail.probs?.[i] ?? 0) * 100).toFixed(1)}%
                         </td>
                       </tr>
@@ -319,7 +325,7 @@ export default function RangeGrid({ grid }: RangeGridProps) {
                 combos={detail.comboList}
                 actions={grid.actions}
               />
-            </>
+            </div>
           )}
         </div>
       </div>

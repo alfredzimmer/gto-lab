@@ -14,10 +14,10 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0a0a0a]">
-      <div className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-3 sm:px-6 h-12 sm:h-16 flex items-center justify-between">
         <div className="flex items-center gap-2 sm:gap-8">
           <Link href="/" className="flex items-center gap-2 group">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white">
+            <span className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
               GTO Lab
             </span>
           </Link>

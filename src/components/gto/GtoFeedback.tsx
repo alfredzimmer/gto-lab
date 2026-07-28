@@ -66,20 +66,22 @@ export default function GtoFeedback({
     spot.toCallBB > 0 ? breakEvenEquity(spot.potBB, spot.toCallBB) : null;
 
   return (
-    <div className="space-y-4">
-      <div className={`p-3 rounded-lg border ${v.className}`}>
+    <div className="space-y-3 sm:space-y-4">
+      <div className={`px-3 py-2 sm:p-3 rounded-lg border ${v.className}`}>
         <div className="font-semibold text-sm sm:text-base">{v.label}</div>
-        <div className="text-xs sm:text-sm mt-0.5">{v.detail}</div>
+        <div className="text-[11px] sm:text-sm mt-0.5 leading-snug">
+          {v.detail}
+        </div>
       </div>
 
       <div>
-        <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
+        <h3 className="text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5 sm:mb-2">
           GTO frequencies at this spot
         </h3>
-        <div className="space-y-2">
+        <div className="space-y-1.5 sm:space-y-2">
           {sorted.map(({ action, probability }) => (
             <div key={action}>
-              <div className="flex justify-between text-xs sm:text-sm mb-0.5">
+              <div className="flex justify-between gap-2 text-[11px] sm:text-sm mb-0.5">
                 <span
                   className={
                     action === userAction
@@ -90,11 +92,11 @@ export default function GtoFeedback({
                   {spot.actionLabels[action] ?? action}
                   {action === userAction && " ← you"}
                 </span>
-                <span className="font-mono text-slate-900 dark:text-white">
+                <span className="font-mono tabular-nums text-slate-900 dark:text-white">
                   {(probability * 100).toFixed(1)}%
                 </span>
               </div>
-              <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-1.5 sm:h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full ${
                     action === userAction
@@ -109,34 +111,42 @@ export default function GtoFeedback({
         </div>
       </div>
 
+      {/* Two stats side by side rather than two sentences: the comparison is
+          the point, and it costs one line instead of three. */}
       {requiredEquity !== null && (
-        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 text-xs sm:text-sm text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="grid grid-cols-2 gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">
           <div>
-            Pot odds is{" "}
-            <span className="font-mono">
-              {(requiredEquity * 100).toFixed(1)}%
-            </span>
-            .
-          </div>
-          {equityPending ? (
-            <div className="text-slate-400 dark:text-slate-500">
-              Estimating your calling equity…
+            <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+              Pot odds
             </div>
-          ) : equity !== null ? (
-            <div>
-              Calling equity is{" "}
-              <span
-                className={`font-mono font-semibold ${
+            <div className="font-mono tabular-nums text-sm sm:text-base text-slate-900 dark:text-white">
+              {(requiredEquity * 100).toFixed(1)}%
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+              Your equity
+            </div>
+            {equityPending ? (
+              <div className="text-xs text-slate-400 dark:text-slate-500 py-0.5">
+                Estimating…
+              </div>
+            ) : equity !== null ? (
+              <div
+                className={`font-mono tabular-nums font-semibold text-sm sm:text-base ${
                   equity >= requiredEquity
                     ? "text-green-600 dark:text-green-400"
                     : "text-red-600 dark:text-red-400"
                 }`}
               >
                 {(equity * 100).toFixed(1)}%
-              </span>
-              .
-            </div>
-          ) : null}
+              </div>
+            ) : (
+              <div className="font-mono text-sm sm:text-base text-slate-400">
+                —
+              </div>
+            )}
+          </div>
         </div>
       )}
 
