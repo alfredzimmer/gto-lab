@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import ActionButtons from "@/components/gto/ActionButtons";
 import BoardSelector from "@/components/gto/BoardSelector";
 import RangeGrid from "@/components/gto/RangeGrid";
 import {
@@ -131,7 +132,7 @@ export default function RangeExplorer() {
 
   if (modelStatus === "loading") {
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+      <div className="flex min-h-[calc(100dvh-3rem)] sm:min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-slate-500">Loading GTO strategy model...</div>
       </div>
     );
@@ -139,7 +140,7 @@ export default function RangeExplorer() {
 
   if (modelStatus === "unavailable") {
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
+      <div className="flex min-h-[calc(100dvh-3rem)] sm:min-h-[calc(100vh-4rem)] items-center justify-center px-4">
         <div className="max-w-lg text-center space-y-3">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">
             Strategy model not available
@@ -155,14 +156,16 @@ export default function RangeExplorer() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a0a0a]">
-      <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-[1500px]">
-        <div className="mb-4 sm:mb-6 flex flex-wrap items-end justify-between gap-2">
+    <div className="min-h-[calc(100dvh-3rem)] sm:min-h-[calc(100vh-4rem)] bg-white dark:bg-[#0a0a0a]">
+      <main className="container mx-auto px-3 sm:px-6 py-3 sm:py-8 max-w-[1500px]">
+        {/* On a phone the header nav already marks the page, so the title
+            block collapses to nothing and gives its space to the grid. */}
+        <div className="sm:mb-6 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+            <h1 className="sr-only sm:not-sr-only text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
               GTO Ranges
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            <p className="hidden sm:block text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               Walk the action tree; the grid shows the solved strategy for every
               starting hand of the player to act.
             </p>
@@ -170,7 +173,7 @@ export default function RangeExplorer() {
         </div>
 
         {/* Node header: street, pot, board, line breadcrumb */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 sm:p-4 mb-3 sm:mb-4 flex flex-wrap items-center gap-x-3 sm:gap-x-6 gap-y-1 sm:gap-y-2 text-xs sm:text-sm">
           <span className="font-semibold text-slate-900 dark:text-white">
             {STREET_NAMES[summary.street]}
           </span>
@@ -209,7 +212,7 @@ export default function RangeExplorer() {
               )}
             </span>
           )}
-          <span className="ml-auto flex gap-2">
+          <span className="ml-auto flex gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={undo}
@@ -229,8 +232,9 @@ export default function RangeExplorer() {
           </span>
         </div>
 
-        {/* Decision buttons / chance / terminal */}
-        <div className="mb-4 flex flex-wrap gap-2">
+        {/* Decision buttons / chance / terminal. The shared ActionButtons grid
+            keeps six sizings to three rows on a phone instead of six. */}
+        <div className="mb-3 sm:mb-4">
           {atTerminal ? (
             <span className="text-sm text-slate-500 dark:text-slate-400 py-2">
               Hand over — use Undo to step back.
@@ -239,26 +243,24 @@ export default function RangeExplorer() {
             <button
               type="button"
               onClick={() => setSelectingBoard(true)}
-              className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              className="w-full sm:w-auto py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
             >
               Select {STREET_NAMES[summary.street]}…
             </button>
           ) : (
-            legalActions(nav).map((a, i) => (
-              <button
-                key={a}
-                type="button"
-                onClick={() => takeAction(a)}
-                className="py-2 px-4 bg-slate-100 hover:bg-blue-600 hover:text-white dark:bg-slate-800 dark:hover:bg-blue-600 text-slate-900 dark:text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                {labels[a] ?? a}
-                {grid && (
-                  <span className="ml-2 font-mono text-xs opacity-70">
+            <ActionButtons
+              actions={legalActions(nav)}
+              labels={labels}
+              onAction={takeAction}
+              layout="inline"
+              suffix={(_a, i) =>
+                grid && (
+                  <span className="font-mono text-[10px] sm:text-xs opacity-70">
                     {(grid.aggregate[i] * 100).toFixed(0)}%
                   </span>
-                )}
-              </button>
-            ))
+                )
+              }
+            />
           )}
         </div>
 

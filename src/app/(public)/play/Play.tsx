@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import ActionButtons from "@/components/gto/ActionButtons";
+import ActionLine from "@/components/gto/ActionLine";
 import GtoTable from "@/components/gto/GtoTable";
 import PnlChart from "@/components/play/PnlChart";
 import {
@@ -174,7 +176,7 @@ export default function Play() {
 
   if (modelStatus === "loading") {
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+      <div className="flex min-h-[calc(100dvh-3rem)] sm:min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-slate-500">Loading GTO strategy model...</div>
       </div>
     );
@@ -182,7 +184,7 @@ export default function Play() {
 
   if (modelStatus === "unavailable") {
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
+      <div className="flex min-h-[calc(100dvh-3rem)] sm:min-h-[calc(100vh-4rem)] items-center justify-center px-4">
         <div className="max-w-lg text-center space-y-3">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">
             Strategy model not available
@@ -211,9 +213,9 @@ export default function Play() {
       : null;
 
   const sessionPanel = (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-sm">
-      <div className="flex items-baseline justify-between mb-4">
-        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 sm:p-6 shadow-sm">
+      <div className="flex items-baseline justify-between mb-2 sm:mb-4">
+        <h2 className="text-xs sm:text-sm font-medium text-slate-400 uppercase tracking-wider">
           Session PnL
         </h2>
         <button
@@ -224,10 +226,10 @@ export default function Play() {
           Reset
         </button>
       </div>
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-3 gap-2 mb-2 sm:mb-4">
         <div>
           <div
-            className={`text-2xl font-bold tabular-nums ${
+            className={`text-xl sm:text-2xl font-bold tabular-nums ${
               session.handsPlayed === 0
                 ? "text-slate-900 dark:text-white"
                 : pnlPositive
@@ -242,7 +244,7 @@ export default function Play() {
           </div>
         </div>
         <div>
-          <div className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+          <div className="text-xl sm:text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
             {session.handsPlayed}
           </div>
           <div className="text-[10px] text-slate-400 uppercase tracking-wider">
@@ -250,7 +252,7 @@ export default function Play() {
           </div>
         </div>
         <div>
-          <div className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+          <div className="text-xl sm:text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
             {session.handsPlayed === 0
               ? "—"
               : Math.round(winRateBb100(session))}
@@ -265,80 +267,77 @@ export default function Play() {
   );
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a0a0a]">
-      <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-[1400px]">
-        <div className="mb-4 sm:mb-8 text-center lg:text-left">
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+    <div className="min-h-[calc(100dvh-3rem)] sm:min-h-[calc(100vh-4rem)] bg-white dark:bg-[#0a0a0a]">
+      <main className="container mx-auto px-3 sm:px-6 py-3 sm:py-8 max-w-[1400px]">
+        {/* On a phone the header nav already marks the page, so the title
+            block collapses to nothing and gives its ~70px to the table. */}
+        <div className="sm:mb-8 text-center lg:text-left">
+          <h1 className="sr-only sm:not-sr-only text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
             Heads-Up vs. the Bot
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          <p className="hidden sm:block text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Full hands against the Deep CFR–solved strategy. Both reload to 100
             BB each hand (the depth it was solved for); your PnL accumulates
             locally.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
-          <div className="lg:col-span-8 flex flex-col gap-4">
-            {spot ? (
-              <GtoTable
-                spot={spot}
-                villainCards={
-                  phase === "showdown" ? (outcome?.villainCards ?? null) : null
-                }
-                heroRank={
-                  phase === "showdown" ? (outcome?.heroRank ?? null) : null
-                }
-                villainRank={
-                  phase === "showdown" ? (outcome?.villainRank ?? null) : null
-                }
-                villainThinking={phase === "dealing"}
-                result={result}
-              />
-            ) : (
-              <div className="flex min-h-[400px] sm:min-h-[560px] items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
-                <div className="text-slate-500">Dealing...</div>
-              </div>
-            )}
-            {spot && spot.lineDescription.length > 0 && (
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 text-xs sm:text-sm text-slate-600 dark:text-slate-400 space-y-1">
-                <div className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                  Action so far
+        {/* `contents` dissolves the two columns on a phone so their four
+            panels become direct grid items and `order-*` can interleave them
+            as table -> decision -> recap -> session, putting the buttons in
+            reach without scrolling past the recap. From `lg` the wrappers
+            become blocks again and the original 8/4 columns are restored. */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-8 items-start">
+          <div className="contents lg:block lg:col-span-8 lg:space-y-4">
+            <div className="order-1">
+              {spot ? (
+                <GtoTable
+                  spot={spot}
+                  villainCards={
+                    phase === "showdown"
+                      ? (outcome?.villainCards ?? null)
+                      : null
+                  }
+                  heroRank={
+                    phase === "showdown" ? (outcome?.heroRank ?? null) : null
+                  }
+                  villainRank={
+                    phase === "showdown" ? (outcome?.villainRank ?? null) : null
+                  }
+                  villainThinking={phase === "dealing"}
+                  result={result}
+                />
+              ) : (
+                <div className="flex min-h-[280px] sm:min-h-[560px] items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                  <div className="text-slate-500">Dealing...</div>
                 </div>
-                {spot.lineDescription.map((line) => (
-                  <div key={line}>{line}</div>
-                ))}
-              </div>
+              )}
+            </div>
+            {spot && (
+              <ActionLine lines={spot.lineDescription} className="order-3" />
             )}
           </div>
 
-          <div className="lg:col-span-4 flex flex-col gap-4">
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+          <div className="contents lg:block lg:col-span-4 lg:space-y-4">
+            <div className="order-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-sm">
               {phase === "hero" && spot ? (
                 <>
-                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-3 sm:mb-4">
                     Your decision ({spot.streetName})
                   </h2>
-                  <div className="space-y-2">
-                    {legalActions(history).map((action) => (
-                      <button
-                        key={action}
-                        type="button"
-                        onClick={() => onHeroAction(action)}
-                        className="w-full py-2.5 sm:py-3 px-4 bg-slate-100 hover:bg-blue-600 hover:text-white dark:bg-slate-800 dark:hover:bg-blue-600 text-slate-900 dark:text-white text-sm sm:text-base font-medium rounded-lg transition-all active:scale-[0.98]"
-                      >
-                        {spot.actionLabels[action] ?? action}
-                      </button>
-                    ))}
-                  </div>
+                  <ActionButtons
+                    actions={legalActions(history)}
+                    labels={spot.actionLabels}
+                    onAction={onHeroAction}
+                  />
                 </>
               ) : phase === "showdown" && outcome ? (
                 <>
-                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-1">
                     {outcome.headline}
                   </h2>
                   <div
-                    className={`text-3xl font-bold tabular-nums mb-4 ${
+                    className={`text-2xl sm:text-3xl font-bold tabular-nums mb-3 sm:mb-4 ${
                       outcome.delta > 0
                         ? "text-emerald-600 dark:text-emerald-400"
                         : outcome.delta < 0
@@ -357,7 +356,7 @@ export default function Play() {
                   </button>
                 </>
               ) : (
-                <div className="flex min-h-[120px] items-center justify-center text-sm text-slate-500">
+                <div className="flex min-h-[64px] sm:min-h-[120px] items-center justify-center text-sm text-slate-500">
                   <span>Villain is acting</span>
                   <span className="thinking-dots ml-0.5 inline-flex">
                     <span>.</span>
@@ -368,7 +367,7 @@ export default function Play() {
               )}
             </div>
 
-            {sessionPanel}
+            <div className="order-4">{sessionPanel}</div>
           </div>
         </div>
       </main>

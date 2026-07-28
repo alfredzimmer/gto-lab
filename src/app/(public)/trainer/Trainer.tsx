@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import ActionButtons from "@/components/gto/ActionButtons";
+import ActionLine from "@/components/gto/ActionLine";
 import GtoFeedback from "@/components/gto/GtoFeedback";
 import GtoTable from "@/components/gto/GtoTable";
 import {
@@ -97,12 +99,15 @@ export default function Trainer() {
     }
   }, [modelStatus, nextSpot]);
 
+  // The label sits beside the chips on a phone and above them from `sm` up
+  // (`sm:w-full` forces its own line), so the whole control is one row on mobile.
   const streetPanel = (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-      <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
-        Practice streets
-      </div>
-      <div className="flex flex-wrap gap-2">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 sm:p-4">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <div className="text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider sm:w-full sm:mb-2">
+          <span className="sm:hidden">Streets</span>
+          <span className="hidden sm:inline">Practice streets</span>
+        </div>
         {STREET_OPTIONS.map((name, s) => {
           const active = streets.has(s);
           return (
@@ -111,7 +116,7 @@ export default function Trainer() {
               type="button"
               aria-pressed={active}
               onClick={() => toggleStreet(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                 active
                   ? "bg-blue-600 text-white"
                   : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -122,7 +127,7 @@ export default function Trainer() {
           );
         })}
       </div>
-      <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+      <p className="hidden sm:block text-[11px] text-slate-400 dark:text-slate-500 mt-2">
         Spots are dealt only on the selected streets — changing the selection
         deals a new spot. At least one stays on.
       </p>
@@ -131,7 +136,7 @@ export default function Trainer() {
 
   if (modelStatus === "loading") {
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+      <div className="flex min-h-[calc(100dvh-3rem)] sm:min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-slate-500">Loading GTO strategy model...</div>
       </div>
     );
@@ -139,7 +144,7 @@ export default function Trainer() {
 
   if (modelStatus === "unavailable") {
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
+      <div className="flex min-h-[calc(100dvh-3rem)] sm:min-h-[calc(100vh-4rem)] items-center justify-center px-4">
         <div className="max-w-lg text-center space-y-3">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">
             Strategy model not available
@@ -158,13 +163,15 @@ export default function Trainer() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a0a0a]">
-      <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-[1400px]">
-        <div className="mb-4 sm:mb-8 text-center lg:text-left">
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+    <div className="min-h-[calc(100dvh-3rem)] sm:min-h-[calc(100vh-4rem)] bg-white dark:bg-[#0a0a0a]">
+      <main className="container mx-auto px-3 sm:px-6 py-3 sm:py-8 max-w-[1400px]">
+        {/* On a phone the header nav already marks the page, so the title
+            block collapses to nothing and gives its ~70px to the table. */}
+        <div className="sm:mb-8 text-center lg:text-left">
+          <h1 className="sr-only sm:not-sr-only text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
             GTO Trainer
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          <p className="hidden sm:block text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Play spots against a Deep CFR–solved strategy (100 BB, discretized
             bet sizes).
           </p>
@@ -191,42 +198,33 @@ export default function Trainer() {
             <div className="text-slate-500">Dealing next spot...</div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
-            <div className="lg:col-span-8 flex flex-col gap-4">
-              <GtoTable spot={spot} />
-              {spot.lineDescription.length > 0 && (
-                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 text-xs sm:text-sm text-slate-600 dark:text-slate-400 space-y-1">
-                  <div className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Action so far
-                  </div>
-                  {spot.lineDescription.map((line) => (
-                    <div key={line}>{line}</div>
-                  ))}
-                </div>
-              )}
+          // `contents` dissolves the two columns on a phone so their four
+          // panels become direct grid items and `order-*` can interleave them
+          // as table -> decision -> recap -> streets, putting the buttons in
+          // reach without scrolling past the recap. From `lg` the wrappers
+          // become blocks again and the original 8/4 columns are restored.
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-8 items-start">
+            <div className="contents lg:block lg:col-span-8 lg:space-y-4">
+              <div className="order-1">
+                <GtoTable spot={spot} />
+              </div>
+              <ActionLine lines={spot.lineDescription} className="order-3" />
             </div>
 
-            <div className="lg:col-span-4">
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+            <div className="contents lg:block lg:col-span-4 lg:space-y-4">
+              <div className="order-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-sm">
+                <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-3 sm:mb-4">
                   {userAction === null
                     ? `Your decision (${spot.streetName})`
                     : "GTO"}
                 </h2>
 
                 {userAction === null ? (
-                  <div className="space-y-2">
-                    {strategy.map(({ action }) => (
-                      <button
-                        key={action}
-                        type="button"
-                        onClick={() => setUserAction(action)}
-                        className="w-full py-2.5 sm:py-3 px-4 bg-slate-100 hover:bg-blue-600 hover:text-white dark:bg-slate-800 dark:hover:bg-blue-600 text-slate-900 dark:text-white text-sm sm:text-base font-medium rounded-lg transition-colors"
-                      >
-                        {spot.actionLabels[action] ?? action}
-                      </button>
-                    ))}
-                  </div>
+                  <ActionButtons
+                    actions={strategy.map((s) => s.action)}
+                    labels={spot.actionLabels}
+                    onAction={setUserAction}
+                  />
                 ) : (
                   <GtoFeedback
                     spot={spot}
@@ -239,7 +237,7 @@ export default function Trainer() {
                 )}
               </div>
 
-              <div className="mt-4">{streetPanel}</div>
+              <div className="order-4">{streetPanel}</div>
             </div>
           </div>
         )}

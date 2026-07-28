@@ -87,7 +87,7 @@ export default function PnlChart({ results, pnlBB }: PnlChartProps) {
 
   if (results.length === 0) {
     return (
-      <div className="flex h-[200px] items-center justify-center text-xs text-slate-400 dark:text-slate-500">
+      <div className="flex h-[110px] sm:h-[200px] items-center justify-center text-xs text-slate-400 dark:text-slate-500">
         Play a hand to start your PnL curve.
       </div>
     );
@@ -96,10 +96,10 @@ export default function PnlChart({ results, pnlBB }: PnlChartProps) {
   // Anchor the curve at the origin so the first hand's swing reads from zero.
   const data = [{ hand: 0, cumBB: 0, deltaBB: 0 }, ...results];
 
-  if (!mounted) return <div className="h-[200px]" />;
+  if (!mounted) return <div className="h-[110px] sm:h-[200px]" />;
 
   return (
-    <div className="h-[200px] w-full">
+    <div className="h-[110px] sm:h-[200px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={data}
