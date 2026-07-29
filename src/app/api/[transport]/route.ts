@@ -8,6 +8,7 @@
  */
 
 import { createMcpHandler } from "mcp-handler";
+import { enforceRateLimit } from "@/lib/ratelimit";
 import { registerGtoTools } from "../../../../mcp/tools";
 import { runStrategyBatch } from "../../../../mcp/runner-wasm";
 
@@ -16,12 +17,23 @@ export const runtime = "nodejs";
 // Cold starts load the wasm runtime + model; give tool calls room.
 export const maxDuration = 60;
 
-const handler = createMcpHandler(
+const mcpHandler = createMcpHandler(
   (server) => {
     registerGtoTools(server, runStrategyBatch);
   },
   {},
   { basePath: "/api" },
 );
+
+// Per-IP rate limit in front of the MCP handler so the shared hosted instance
+// can't be abused. Inert unless Upstash credentials are set (see lib/ratelimit).
+async function handler(req: Request, ...rest: unknown[]): Promise<Response> {
+  const limited = await enforceRateLimit(req);
+  if (limited) return limited;
+  return (mcpHandler as (r: Request, ...a: unknown[]) => Promise<Response>)(
+    req,
+    ...rest,
+  );
+}
 
 export { handler as GET, handler as POST };

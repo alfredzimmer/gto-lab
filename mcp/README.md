@@ -128,6 +128,19 @@ The route pins `runtime = "nodejs"` (never edge — it needs `fs` + WASM) and
 session is cached per warm instance. Transport is stateless (no Redis needed for
 request/response tool calls).
 
+### Rate limiting
+
+The hosted endpoint is protected by a per-IP limit (`src/lib/ratelimit.ts`) via
+[`@upstash/ratelimit`](https://github.com/upstash/ratelimit) over Upstash Redis —
+connectionless HTTP, the standard for Vercel serverless. Default: **30 requests
+per 60 s per IP**, sliding window; over-budget requests get a `429` with
+`Retry-After`.
+
+It is **fail-open**: with no credentials in the environment it is inert and every
+request passes — so local dev, the stdio server, and self-hosters are unaffected.
+To turn it on, create an Upstash Redis DB and set `UPSTASH_REDIS_REST_URL` and
+`UPSTASH_REDIS_REST_TOKEN` (see `.env.example`) in the Vercel project.
+
 > Not yet validated on a live Vercel deploy — the production build traces the
 > three assets correctly and `next start` serves inference identically to dev, so
 > the remaining risk is Vercel-specific. Confirm on first deploy.
