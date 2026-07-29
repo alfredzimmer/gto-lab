@@ -1,37 +1,47 @@
 import { verdict } from "./GtoFeedback";
 
-// verdict()'s thresholds (0.9 relative, 0.33/0.15/0.05 absolute) are the
-// magic numbers that classify a user's decision as good or bad against the
-// solver's strategy. This pins their exact boundaries down so any future
-// change to them is a deliberate, visible diff rather than a silent drift.
+// verdict() now grades a decision by chips given up rather than by the
+// solver's frequency for it. Two things decide the label: the noise gate
+// (loss <= 2 standard errors reads as clean, because the rollout genuinely
+// cannot tell it apart from the mix) and the share-of-pot bands
+// (1% / 5% / 15%). This pins both so any future change is a visible diff.
+
+const POT = 20; // 1% = 0.2 BB, 5% = 1 BB, 15% = 3 BB
+const EXACT = 0; // no measurement error, so the noise gate never fires
 
 describe("verdict", () => {
-  it("classifies as Solid when within 90% of the best action's probability", () => {
-    // bestProb small enough that the 0.33 absolute floor doesn't also fire.
-    expect(verdict(0.27, 0.3).label).toBe("Solid"); // exactly bestProb * 0.9
-    expect(verdict(0.269999, 0.3).label).not.toBe("Solid");
+  it("reads a loss inside two standard errors as Solid", () => {
+    // 2 BB is a 10% -of-pot loss, i.e. a "Leak" band by size alone...
+    expect(verdict(2, EXACT, POT).label).toBe("Leak");
+    // ...but with an SE of 1 BB the rollout cannot separate it from the mix.
+    expect(verdict(2, 1, POT).label).toBe("Solid");
+    expect(verdict(2, 0.999999, POT).label).not.toBe("Solid");
   });
 
-  it("classifies as Solid when userProb clears the 0.33 absolute floor", () => {
-    // bestProb high enough that the relative threshold doesn't fire.
-    expect(verdict(0.33, 1.0).label).toBe("Solid");
-    expect(verdict(0.329999, 1.0).label).not.toBe("Solid");
+  it("treats a negative loss (beating the mix) as Solid", () => {
+    expect(verdict(-1.5, 0.1, POT).label).toBe("Solid");
+    expect(verdict(0, EXACT, POT).label).toBe("Solid");
   });
 
-  it("classifies as Part of the mix between 0.15 and the Solid thresholds", () => {
-    expect(verdict(0.15, 1.0).label).toBe("Part of the mix");
-    expect(verdict(0.149999, 1.0).label).not.toBe("Part of the mix");
-    expect(verdict(0.329999, 1.0).label).toBe("Part of the mix");
+  it("classifies below 1% of pot as Solid", () => {
+    expect(verdict(0.199999, EXACT, POT).label).toBe("Solid");
+    expect(verdict(0.2, EXACT, POT).label).not.toBe("Solid");
   });
 
-  it("classifies as Marginal between 0.05 and 0.15", () => {
-    expect(verdict(0.05, 1.0).label).toBe("Marginal");
-    expect(verdict(0.049999, 1.0).label).not.toBe("Marginal");
-    expect(verdict(0.149999, 1.0).label).toBe("Marginal");
+  it("classifies 1%-5% of pot as a Slight leak", () => {
+    expect(verdict(0.2, EXACT, POT).label).toBe("Slight leak");
+    expect(verdict(0.999999, EXACT, POT).label).toBe("Slight leak");
+    expect(verdict(1, EXACT, POT).label).not.toBe("Slight leak");
   });
 
-  it("classifies as Mistake below 0.05", () => {
-    expect(verdict(0.049999, 1.0).label).toBe("Mistake");
-    expect(verdict(0, 1.0).label).toBe("Mistake");
+  it("classifies 5%-15% of pot as a Leak", () => {
+    expect(verdict(1, EXACT, POT).label).toBe("Leak");
+    expect(verdict(2.999999, EXACT, POT).label).toBe("Leak");
+    expect(verdict(3, EXACT, POT).label).not.toBe("Leak");
+  });
+
+  it("classifies 15%+ of pot as a Big mistake", () => {
+    expect(verdict(3, EXACT, POT).label).toBe("Big mistake");
+    expect(verdict(50, EXACT, POT).label).toBe("Big mistake");
   });
 });

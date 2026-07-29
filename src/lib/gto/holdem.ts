@@ -210,8 +210,12 @@ export function currentPlayer(h: History, stack: number = STACK): number {
   return parseHistory(h, stack).toAct;
 }
 
-export function legalActions(h: History, stack: number = STACK): string[] {
-  const s = parseHistory(h, stack);
+/**
+ * Legal action tokens for an already-parsed state. Split out of
+ * `legalActions` so rollout loops that already hold a `ParsedState` don't
+ * re-walk the whole history just to ask what is legal.
+ */
+export function legalActionsFor(s: ParsedState): string[] {
   const p = s.toAct;
   const facing = s.streetContrib[1 - p] > s.streetContrib[p];
   const actions: string[] = [];
@@ -219,6 +223,10 @@ export function legalActions(h: History, stack: number = STACK): string[] {
   actions.push(CHECK_CALL);
   actions.push(...Object.keys(aggressiveAmounts(s)));
   return actions;
+}
+
+export function legalActions(h: History, stack: number = STACK): string[] {
+  return legalActionsFor(parseHistory(h, stack));
 }
 
 export function legalActionIndices(

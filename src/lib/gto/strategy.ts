@@ -31,7 +31,22 @@ import {
   parseHistory,
 } from "./holdem";
 
-const MODEL_URL = "/models/holdem_strategy.onnx";
+const MODEL_PATH = "/models/holdem_strategy.onnx";
+const ORT_RUNTIME_PATH = "/ort/";
+
+/**
+ * Absolute URL for a path under public/.
+ *
+ * These have to be absolute, not root-relative: this module also runs inside
+ * the EV rollout worker, which the bundler serves from a `blob:` URL. A
+ * `blob:` document has no path to resolve "/ort/" against, so ORT's own fetch
+ * of the wasm runtime fails with "Failed to parse URL" and the worker's
+ * session never loads. `self.location.origin` is the page's origin in both
+ * the window and the worker, so one expression covers both.
+ */
+function publicUrl(path: string): string {
+  return `${self.location.origin}${path}`;
+}
 
 interface OrtRuntime {
   ort: typeof OrtTypes;
@@ -49,9 +64,9 @@ export function loadStrategySession(): Promise<OrtRuntime> {
     // doesn't need). public/ort/ holds the matching runtime files,
     // staged by scripts/copy-ort-wasm.mjs.
     runtimePromise = import("onnxruntime-web/wasm").then(async (ort) => {
-      ort.env.wasm.wasmPaths = "/ort/";
+      ort.env.wasm.wasmPaths = publicUrl(ORT_RUNTIME_PATH);
       ort.env.wasm.numThreads = 1;
-      const session = await ort.InferenceSession.create(MODEL_URL, {
+      const session = await ort.InferenceSession.create(publicUrl(MODEL_PATH), {
         executionProviders: ["wasm"],
       });
       return { ort: ort as unknown as typeof OrtTypes, session };
@@ -297,6 +312,36 @@ async function villainRange(
   return weights;
 }
 
+export interface VillainPosterior {
+  /** Candidate villain hole-card pairs, hero/board blockers removed. */
+  pairs: [number, number][];
+  /** Unnormalized posterior weight for each entry of `pairs`. */
+  weights: Float32Array;
+}
+
+/**
+ * The strategy net's own belief about the villain's hole cards at decision
+ * node `h`, seen from `heroSeat`: every combo the hero doesn't block,
+ * weighted by the probability the net would have taken the villain's actual
+ * line with it. Shared by the trainer's equity readout and its EV rollouts
+ * (lib/gto/ev.ts) so both reason about the same villain.
+ */
+export async function villainPosterior(
+  h: History,
+  heroSeat: number,
+  stack: number = STACK,
+): Promise<VillainPosterior> {
+  const s = parseHistory(h, stack);
+  const dead = new Set<number>([
+    h[2 * heroSeat] as number,
+    h[2 * heroSeat + 1] as number,
+    ...s.board,
+  ]);
+  const pairs = candidatePairs(dead);
+  const weights = await villainRange(h, 1 - heroSeat, pairs, stack);
+  return { pairs, weights };
+}
+
 /** Monte-Carlo showdown equity of the hero hand vs the weighted villain range. */
 export function equityVsRange(
   heroCards: [number, number],
@@ -370,16 +415,13 @@ export async function heroEquityVsRange(
   stack: number = STACK,
   samples = 2000,
 ): Promise<number> {
-  const s = parseHistory(h, stack);
   const heroCards: [number, number] = [
     h[2 * heroSeat] as number,
     h[2 * heroSeat + 1] as number,
   ];
-  const board = s.board.slice();
-  const dead = new Set<number>([heroCards[0], heroCards[1], ...board]);
-  const pairs = candidatePairs(dead);
+  const board = parseHistory(h, stack).board.slice();
 
-  const weights = await villainRange(h, 1 - heroSeat, pairs, stack);
+  const { pairs, weights } = await villainPosterior(h, heroSeat, stack);
   let eq = equityVsRange(heroCards, board, pairs, weights, samples);
   if (Number.isNaN(eq)) {
     // Degenerate posterior (every combo ruled out) — fall back to the
