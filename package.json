@@ -12,6 +12,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "check:onnx": "node scripts/check-onnx-runtime.mjs",
+    "check:mcp": "node scripts/check-mcp.mjs",
     "mcp": "tsx mcp/server.ts",
     "prepare": "node scripts/copy-ort-wasm.mjs"
   },
