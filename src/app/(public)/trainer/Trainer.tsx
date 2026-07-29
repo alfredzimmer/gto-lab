@@ -5,7 +5,11 @@ import ActionButtons from "@/components/gto/ActionButtons";
 import ActionLine from "@/components/gto/ActionLine";
 import GtoFeedback from "@/components/gto/GtoFeedback";
 import GtoTable from "@/components/gto/GtoTable";
-import { evaluateActionsAsync, warmUpEvWorker } from "@/lib/gto/ev-client";
+import {
+  evaluateActionsAsync,
+  heroEquityVsRangeAsync,
+  warmUpEvWorker,
+} from "@/lib/gto/ev-client";
 import type { EvReport } from "@/lib/gto/ev";
 import {
   type ActionProb,
@@ -14,7 +18,6 @@ import {
   describeSpot,
   generateScenario,
   getStrategy,
-  heroEquityVsRange,
   loadStrategySession,
 } from "@/lib/gto/strategy";
 
@@ -79,10 +82,9 @@ export default function Trainer() {
 
     // The spot is on screen now — spend the user's thinking time on the two
     // background estimates, so both are already there the moment they act.
-    // Neither depends on which action they pick. The EV rollout runs in a
-    // worker and the equity estimate on this thread, so they genuinely
-    // overlap rather than queueing behind one wasm session. A newer deal
-    // discards stale results via reqId.
+    // Neither depends on which action they pick. Both run in the worker, off
+    // the UI thread, so a heavy preflop posterior never freezes the page. A
+    // newer deal discards stale results via reqId.
     const { sc, info, probs } = dealt;
     const wantEquity = info.toCallBB > 0; // only meaningful facing a bet
     setEquityPending(wantEquity);
@@ -100,7 +102,7 @@ export default function Trainer() {
       });
 
     if (!wantEquity) return;
-    heroEquityVsRange(sc.history, sc.heroSeat)
+    heroEquityVsRangeAsync(sc.history, sc.heroSeat)
       .then((e) => {
         if (reqIdRef.current === reqId) setEquity(e);
       })

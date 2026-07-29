@@ -1,12 +1,12 @@
 /**
- * Web Worker host for the EV rollout.
+ * Web Worker host for the trainer's two background estimates: the per-action
+ * EV rollout and the hero-vs-range showdown equity.
  *
- * The rollout runs entirely inside one macrotask — ORT's wasm session resolves
- * without ever yielding to the event loop — so on the main thread its whole
- * cost landed as a single freeze (measured ~200ms at 1000 samples, ~850ms at
- * 6000). That freeze is why the sample count had a ceiling: more accuracy
- * bought a longer stall. Off the main thread the stall becomes invisible and
- * the only limit left is how long the user is willing to wait.
+ * Both are pure wasm-session number crunching that resolves without ever
+ * yielding to the event loop, so on the main thread each one landed as a
+ * single freeze — the EV rollout at ~200-850ms, and the equity's villain
+ * posterior at up to 1225 network rows on a preflop node. Running them here
+ * keeps the UI thread free no matter how many samples or combos they touch.
  *
  * The worker gets its own ORT session: module registries are per-worker, so
  * `loadStrategySession` here builds a second wasm runtime rather than sharing
@@ -16,9 +16,14 @@
 
 import { type EvReport, evaluateActions } from "./ev";
 import type { History } from "./holdem";
-import { type ActionProb, loadStrategySession } from "./strategy";
+import {
+  type ActionProb,
+  heroEquityVsRange,
+  loadStrategySession,
+} from "./strategy";
 
 export interface EvRequest {
+  kind: "ev";
   id: number;
   history: History;
   heroSeat: number;
@@ -27,8 +32,20 @@ export interface EvRequest {
   stack?: number;
 }
 
-export type EvResponse =
-  | { id: number; ok: true; report: EvReport }
+export interface EquityRequest {
+  kind: "equity";
+  id: number;
+  history: History;
+  heroSeat: number;
+  stack?: number;
+  samples?: number;
+}
+
+export type WorkerRequest = EvRequest | EquityRequest;
+
+export type WorkerResponse =
+  | { id: number; ok: true; kind: "ev"; report: EvReport }
+  | { id: number; ok: true; kind: "equity"; equity: number }
   | { id: number; ok: false; error: string };
 
 // The project's tsconfig ships the `dom` lib, not `webworker`, and the two
@@ -37,9 +54,9 @@ export type EvResponse =
 const ctx = self as unknown as {
   addEventListener(
     type: "message",
-    listener: (event: MessageEvent<EvRequest>) => void,
+    listener: (event: MessageEvent<WorkerRequest>) => void,
   ): void;
-  postMessage(message: EvResponse): void;
+  postMessage(message: WorkerResponse): void;
 };
 
 // Start fetching and compiling the model the moment the worker is constructed,
@@ -49,19 +66,37 @@ loadStrategySession().catch(() => {
   /* surfaced per-request below; a bare rejection here must not kill the worker */
 });
 
-ctx.addEventListener("message", async (event: MessageEvent<EvRequest>) => {
-  const { id, history, heroSeat, strategy, samples, stack } = event.data;
+async function handle(req: WorkerRequest): Promise<WorkerResponse> {
+  if (req.kind === "equity") {
+    const equity = await heroEquityVsRange(
+      req.history,
+      req.heroSeat,
+      req.stack,
+      req.samples,
+    );
+    return { id: req.id, ok: true, kind: "equity", equity };
+  }
+  const report = await evaluateActions(
+    req.history,
+    req.heroSeat,
+    req.strategy,
+    {
+      samples: req.samples,
+      stack: req.stack,
+    },
+  );
+  return { id: req.id, ok: true, kind: "ev", report };
+}
+
+ctx.addEventListener("message", async (event: MessageEvent<WorkerRequest>) => {
+  const req = event.data;
   try {
-    const report = await evaluateActions(history, heroSeat, strategy, {
-      samples,
-      stack,
-    });
-    ctx.postMessage({ id, ok: true, report } satisfies EvResponse);
+    ctx.postMessage(await handle(req));
   } catch (err) {
     ctx.postMessage({
-      id,
+      id: req.id,
       ok: false,
       error: err instanceof Error ? err.message : String(err),
-    } satisfies EvResponse);
+    });
   }
 });

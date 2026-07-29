@@ -1,19 +1,24 @@
 /**
- * Main-thread client for the EV rollout worker (./ev.worker.ts).
+ * Main-thread client for the trainer's estimate worker (./ev.worker.ts).
  *
  * One worker is created lazily and reused for the whole session — spawning per
  * request would re-fetch and re-compile the model every deal, which costs far
- * more than the rollout itself.
+ * more than the work itself.
  *
- * Every path degrades to running the rollout inline on the main thread: no
+ * Every path degrades to running the computation inline on the main thread: no
  * `Worker` constructor (SSR, ancient browsers), construction throwing, or the
- * worker erroring out. That fallback is the pre-worker behaviour — a ~200ms
- * stall — which is worse than the worker but much better than a trainer that
- * silently stops grading.
+ * worker erroring out. That fallback is the pre-worker behaviour — a stall on
+ * the UI thread — which is worse than the worker but much better than a trainer
+ * that silently stops grading.
  */
 
 import type { EvReport } from "./ev";
-import type { EvRequest, EvResponse } from "./ev.worker";
+import type {
+  EquityRequest,
+  EvRequest,
+  WorkerRequest,
+  WorkerResponse,
+} from "./ev.worker";
 import type { History } from "./holdem";
 import type { ActionProb } from "./strategy";
 
@@ -23,10 +28,10 @@ export interface EvOptions {
 }
 
 interface PendingRequest {
-  resolve: (report: EvReport) => void;
+  resolve: (value: unknown) => void;
   reject: (err: unknown) => void;
-  /** Kept so a worker that dies mid-flight can be retried on the main thread. */
-  request: EvRequest;
+  /** Redo this request inline if the worker dies mid-flight. */
+  rerun: () => Promise<unknown>;
 }
 
 let worker: Worker | null = null;
@@ -34,9 +39,18 @@ let workerUnavailable = false;
 let nextRequestId = 1;
 const pending = new Map<number, PendingRequest>();
 
-/** Run the rollout on the main thread. Loaded on demand so the worker path
- *  doesn't pull the rollout into the page bundle. */
-async function runInline(request: EvRequest): Promise<EvReport> {
+/** Run a request on the main thread. The rollout and equity modules are loaded
+ *  on demand so the worker path doesn't pull them into the page bundle. */
+async function runInline(request: WorkerRequest): Promise<unknown> {
+  if (request.kind === "equity") {
+    const { heroEquityVsRange } = await import("./strategy");
+    return heroEquityVsRange(
+      request.history,
+      request.heroSeat,
+      request.stack,
+      request.samples,
+    );
+  }
   const { evaluateActions } = await import("./ev");
   return evaluateActions(request.history, request.heroSeat, request.strategy, {
     samples: request.samples,
@@ -52,7 +66,7 @@ function abandonWorker() {
   const stranded = [...pending.values()];
   pending.clear();
   for (const p of stranded) {
-    runInline(p.request).then(p.resolve, p.reject);
+    p.rerun().then(p.resolve, p.reject);
   }
 }
 
@@ -69,13 +83,13 @@ function getWorker(): Worker | null {
     workerUnavailable = true;
     return null;
   }
-  worker.onmessage = (event: MessageEvent<EvResponse>) => {
+  worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
     const msg = event.data;
     const p = pending.get(msg.id);
     if (!p) return; // superseded by a newer deal; the caller stopped caring
     pending.delete(msg.id);
-    if (msg.ok) p.resolve(msg.report);
-    else p.reject(new Error(msg.error));
+    if (!msg.ok) p.reject(new Error(msg.error));
+    else p.resolve(msg.kind === "equity" ? msg.equity : msg.report);
   };
   // Fires for module-load failures and other uncaught worker errors, which no
   // per-request try/catch inside the worker can see.
@@ -92,6 +106,29 @@ export function warmUpEvWorker(): void {
   getWorker();
 }
 
+/** Dispatch a request to the worker, or run it inline when there is no worker.
+ *  `rerun` is how to redo it inline if the worker dies after we hand it off. */
+function dispatch<T>(
+  request: WorkerRequest,
+  rerun: () => Promise<unknown>,
+): Promise<T> {
+  const w = getWorker();
+  if (!w) return rerun() as Promise<T>;
+  return new Promise<T>((resolve, reject) => {
+    pending.set(request.id, {
+      resolve: resolve as (value: unknown) => void,
+      reject,
+      rerun,
+    });
+    try {
+      w.postMessage(request);
+    } catch (err) {
+      pending.delete(request.id);
+      reject(err);
+    }
+  });
+}
+
 /**
  * Per-action EV for a hero decision node, computed off the main thread.
  * Same contract as `evaluateActions`, minus the precomputed-posterior option:
@@ -105,6 +142,7 @@ export function evaluateActionsAsync(
   options: EvOptions = {},
 ): Promise<EvReport> {
   const request: EvRequest = {
+    kind: "ev",
     id: nextRequestId++,
     history,
     heroSeat,
@@ -112,16 +150,28 @@ export function evaluateActionsAsync(
     samples: options.samples,
     stack: options.stack,
   };
-  const w = getWorker();
-  if (!w) return runInline(request);
+  return dispatch<EvReport>(request, () => runInline(request));
+}
 
-  return new Promise<EvReport>((resolve, reject) => {
-    pending.set(request.id, { resolve, reject, request });
-    try {
-      w.postMessage(request);
-    } catch (err) {
-      pending.delete(request.id);
-      reject(err);
-    }
-  });
+/**
+ * Hero showdown equity vs the villain's posterior range at a decision node,
+ * computed off the main thread. Same contract as `heroEquityVsRange`.
+ * Preflop is its heaviest case — the villain posterior queries the net for
+ * every unblocked combo (up to 1225 rows) — which is exactly the work this
+ * keeps off the UI thread.
+ */
+export function heroEquityVsRangeAsync(
+  history: History,
+  heroSeat: number,
+  options: EvOptions = {},
+): Promise<number> {
+  const request: EquityRequest = {
+    kind: "equity",
+    id: nextRequestId++,
+    history,
+    heroSeat,
+    samples: options.samples,
+    stack: options.stack,
+  };
+  return dispatch<number>(request, () => runInline(request));
 }
