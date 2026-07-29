@@ -110,9 +110,11 @@ For stdio-only clients, bridge with [`mcp-remote`](https://www.npmjs.com/package
 
 ## Deploy on Vercel
 
-The remote endpoint is a normal Next route — deploying the app deploys the MCP
-server; connect clients to `https://<deployment>/api/mcp`. Two things make it
-work on serverless, both already configured in `next.config.ts`:
+A hosted instance runs at `https://gto-thingy.vercel.app/api/mcp` — clients can
+connect there directly. To run your own, the remote endpoint is a normal Next
+route, so deploying the app deploys the MCP server; connect clients to
+`https://<deployment>/api/mcp`. Two things make it work on serverless, both
+already configured in `next.config.ts`:
 
 - `serverExternalPackages: ["onnxruntime-web"]` keeps the wasm runtime out of the
   bundler.

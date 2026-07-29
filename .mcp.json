@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "gto-lab": {
+      "command": "pnpm",
+      "args": ["mcp"]
+    }
+  }
+}
