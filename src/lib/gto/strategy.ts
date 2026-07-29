@@ -157,11 +157,39 @@ function continuingProbs(probs: ActionProb[]): ActionProb[] {
 }
 
 /**
- * Deal a practice spot deterministically for a chosen street. Rather than
- * dealing random hands and hoping one lands on the wanted street (which skews
- * hard toward preflop — reached every hand — over the rare river), pick the
- * target street uniformly among the selected ones, then BUILD a single hand
- * that reaches it:
+ * Lowest stack-to-pot ratio a practice spot may have at the hero's decision.
+ * Below this the hero has so little left behind relative to the pot that every
+ * action collapses to the same thing — e.g. 4bb behind into a 192bb pot, where
+ * "check" and "jam" both just go to showdown for a rounding error. There is no
+ * strategy to learn there, so those spots are rejected. 0.2 keeps genuine
+ * low-SPR play (a jam still moves a fifth of the pot) while cutting the forced
+ * ones.
+ */
+const MIN_SPR = 0.2;
+
+/** How many times to re-deal chasing a spot that clears MIN_SPR before
+ *  settling for the roomiest one seen. Bounded so generation always returns. */
+const MAX_SPOT_ATTEMPTS = 12;
+
+/**
+ * Stack-to-pot ratio at a decision node, using the *effective* stack behind
+ * (the smaller of the two remaining), since that is what bounds all further
+ * betting — a hero deep behind a nearly-stacked villain still can't play for
+ * more than the villain can call.
+ */
+function decisionSpr(h: History): number {
+  const s = parseHistory(h);
+  const pot = s.contrib[0] + s.contrib[1];
+  if (pot <= 0) return Number.POSITIVE_INFINITY;
+  const behind = Math.min(s.stack - s.contrib[0], s.stack - s.contrib[1]);
+  return behind / pot;
+}
+
+/**
+ * Build one practice spot for a chosen street. Rather than dealing random hands
+ * and hoping one lands on the wanted street (which skews hard toward preflop —
+ * reached every hand — over the rare river), pick the target street uniformly
+ * among the selected ones, then BUILD a single hand that reaches it:
  *
  *   1. Drive the hand forward with BOTH seats sampling GTO-but-continuing
  *      actions (never fold, never all-in), so it can't end before the target
@@ -171,16 +199,9 @@ function continuingProbs(probs: ActionProb[]): ActionProb[] {
  *      until it is the hero's turn, then quiz on that decision. The hero
  *      always gets a decision on the target street before it can close.
  *
- * Each selected street is shown with probability 1/N (1/4, 1/3, 1/2, or 1),
- * in one pass with no rejection loop.
+ * Each selected street is shown with probability 1/N (1/4, 1/3, 1/2, or 1).
  */
-export async function generateScenario(
-  streets: ReadonlySet<number> = new Set([0, 1, 2, 3]),
-): Promise<GtoScenario> {
-  const selected = [...streets];
-  if (selected.length === 0) {
-    throw new Error("no practice streets selected");
-  }
+async function buildSpot(selected: number[]): Promise<GtoScenario> {
   const targetStreet = selected[Math.floor(Math.random() * selected.length)];
   const heroSeat = Math.random() < 0.5 ? 0 : 1;
 
@@ -207,6 +228,36 @@ export async function generateScenario(
     }
     h = [...h, sampleFrom(await getStrategy(h))];
   }
+}
+
+/**
+ * Deal a practice spot, skipping the degenerate near-all-in ones. Phase-1
+ * self-play naturally commits most of both stacks after a few pot-sized raises,
+ * so later streets keep landing on forced "jam or check for a rounding error"
+ * spots (see MIN_SPR). Re-deal until one clears the SPR floor; if a street is
+ * just inherently low-SPR and none does, return the roomiest attempt rather
+ * than loop forever.
+ */
+export async function generateScenario(
+  streets: ReadonlySet<number> = new Set([0, 1, 2, 3]),
+): Promise<GtoScenario> {
+  const selected = [...streets];
+  if (selected.length === 0) {
+    throw new Error("no practice streets selected");
+  }
+
+  let best: GtoScenario | null = null;
+  let bestSpr = Number.NEGATIVE_INFINITY;
+  for (let attempt = 0; attempt < MAX_SPOT_ATTEMPTS; attempt++) {
+    const spot = await buildSpot(selected);
+    const spr = decisionSpr(spot.history);
+    if (spr >= MIN_SPR) return spot;
+    if (spr > bestSpr) {
+      bestSpr = spr;
+      best = spot;
+    }
+  }
+  return best as GtoScenario;
 }
 
 /**
