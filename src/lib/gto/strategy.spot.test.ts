@@ -18,7 +18,10 @@ function pick(street: number, toCallPositive: boolean): DecisionVector {
   const v = decisionVectors.find(
     (v) => v.street === street && v.toCall > 0 === toCallPositive,
   );
-  if (!v) throw new Error(`no fixture for street=${street} toCall>0=${toCallPositive}`);
+  if (!v)
+    throw new Error(
+      `no fixture for street=${street} toCall>0=${toCallPositive}`,
+    );
   return v;
 }
 

@@ -6,13 +6,18 @@ import ActionLine from "@/components/gto/ActionLine";
 import GtoFeedback from "@/components/gto/GtoFeedback";
 import GtoTable from "@/components/gto/GtoTable";
 import {
+  evaluateActionsAsync,
+  heroEquityVsRangeAsync,
+  warmUpEvWorker,
+} from "@/lib/gto/ev-client";
+import type { EvReport } from "@/lib/gto/ev";
+import {
   type ActionProb,
   type GtoScenario,
   type SpotInfo,
   describeSpot,
   generateScenario,
   getStrategy,
-  heroEquityVsRange,
   loadStrategySession,
 } from "@/lib/gto/strategy";
 
@@ -27,15 +32,20 @@ export default function Trainer() {
   const [userAction, setUserAction] = useState<string | null>(null);
   const [equity, setEquity] = useState<number | null>(null);
   const [equityPending, setEquityPending] = useState(false);
+  const [ev, setEv] = useState<EvReport | null>(null);
+  const [evPending, setEvPending] = useState(false);
   const [dealing, setDealing] = useState(false);
   const [dealFailed, setDealFailed] = useState(false);
   const [streets, setStreets] = useState<Set<number>>(
     () => new Set([1, 2, 3]), // preflop off by default
   );
-  // Guards async equity results so a newer deal supersedes a stale one.
+  // Guards async equity/EV results so a newer deal supersedes a stale one.
   const reqIdRef = useRef(0);
 
   useEffect(() => {
+    // Spawn the rollout worker alongside the page's own session so both
+    // models are compiling while the first spot is being dealt.
+    warmUpEvWorker();
     loadStrategySession()
       .then(() => setModelStatus("ready"))
       .catch(() => setModelStatus("unavailable"));
@@ -47,16 +57,20 @@ export default function Trainer() {
     setDealFailed(false);
     setEquity(null);
     setEquityPending(false);
+    setEv(null);
+    setEvPending(false);
     const reqId = ++reqIdRef.current;
 
-    let dealt: { sc: GtoScenario; info: SpotInfo } | null = null;
+    let dealt: { sc: GtoScenario; info: SpotInfo; probs: ActionProb[] } | null =
+      null;
     try {
       const sc = await generateScenario(streets);
       if (reqIdRef.current !== reqId) return; // superseded by a newer deal
       const info = describeSpot(sc.history, sc.heroSeat);
+      const probs = await getStrategy(sc.history);
       setSpot(info);
-      setStrategy(await getStrategy(sc.history));
-      dealt = { sc, info };
+      setStrategy(probs);
+      dealt = { sc, info, probs };
     } catch {
       if (reqIdRef.current !== reqId) return;
       setSpot(null);
@@ -64,14 +78,31 @@ export default function Trainer() {
     } finally {
       if (reqIdRef.current === reqId) setDealing(false);
     }
+    if (!dealt) return;
 
-    // The spot is on screen now — use the user's thinking time to estimate the
-    // hero's equity vs the villain's (net-implied) range in the background, so
-    // the pot-odds box already has it the moment the user acts. Only meaningful
-    // facing a bet; a newer deal cancels a stale result via reqId.
-    if (!dealt || dealt.info.toCallBB <= 0) return;
-    setEquityPending(true);
-    heroEquityVsRange(dealt.sc.history, dealt.sc.heroSeat)
+    // The spot is on screen now — spend the user's thinking time on the two
+    // background estimates, so both are already there the moment they act.
+    // Neither depends on which action they pick. Both run in the worker, off
+    // the UI thread, so a heavy preflop posterior never freezes the page. A
+    // newer deal discards stale results via reqId.
+    const { sc, info, probs } = dealt;
+    const wantEquity = info.toCallBB > 0; // only meaningful facing a bet
+    setEquityPending(wantEquity);
+    setEvPending(true);
+
+    evaluateActionsAsync(sc.history, sc.heroSeat, probs)
+      .then((report) => {
+        if (reqIdRef.current === reqId) setEv(report);
+      })
+      .catch(() => {
+        if (reqIdRef.current === reqId) setEv(null);
+      })
+      .finally(() => {
+        if (reqIdRef.current === reqId) setEvPending(false);
+      });
+
+    if (!wantEquity) return;
+    heroEquityVsRangeAsync(sc.history, sc.heroSeat)
       .then((e) => {
         if (reqIdRef.current === reqId) setEquity(e);
       })
@@ -230,6 +261,8 @@ export default function Trainer() {
                     spot={spot}
                     strategy={strategy}
                     userAction={userAction}
+                    ev={ev}
+                    evPending={evPending}
                     equity={equity}
                     equityPending={equityPending}
                     onNextSpot={nextSpot}

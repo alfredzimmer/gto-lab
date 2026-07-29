@@ -52,17 +52,23 @@ async function main() {
   const decisionVectors = parity.vectors
     .filter((v) => "features" in v)
     .slice(0, 20);
-  assert.equal(decisionVectors.length, 20, "expected 20 sampled decision vectors");
+  assert.equal(
+    decisionVectors.length,
+    20,
+    "expected 20 sampled decision vectors",
+  );
 
   for (const v of decisionVectors) {
-    const input = new ort.Tensor(
-      "float32",
-      toDenseFeatures(v.features),
-      [1, FEATURE_DIM],
-    );
+    const input = new ort.Tensor("float32", toDenseFeatures(v.features), [
+      1,
+      FEATURE_DIM,
+    ]);
     const output = await session.run({ features: input });
 
-    assert.ok(output.action_logits, "model must produce an action_logits output");
+    assert.ok(
+      output.action_logits,
+      "model must produce an action_logits output",
+    );
     assert.deepEqual(
       Array.from(output.action_logits.dims),
       [1, MAX_ACTIONS],
@@ -85,7 +91,10 @@ async function main() {
         ? clipped.map((x) => x / total)
         : clipped.map(() => 1 / clipped.length);
     const probSum = probs.reduce((s, x) => s + x, 0);
-    assert.ok(Math.abs(probSum - 1) < 1e-6, `probabilities must sum to 1, got ${probSum}`);
+    assert.ok(
+      Math.abs(probSum - 1) < 1e-6,
+      `probabilities must sum to 1, got ${probSum}`,
+    );
     for (const p of probs) {
       assert.ok(p >= 0 && p <= 1, `probability out of range: ${p}`);
     }
