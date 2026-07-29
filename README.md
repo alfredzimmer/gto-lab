@@ -12,65 +12,14 @@ pnpm dev
 The app expects a trained strategy model at `public/models/holdem_strategy.onnx` (one is
 committed after training; see below to retrain).
 
-## Use it from an AI agent (MCP)
+## Use it from an AI assistant (MCP)
 
-The solver is exposed to AI agents over [MCP](https://modelcontextprotocol.io), so an
-agent can ask *"what's GTO here?"* and get answers straight from the strategy net.
-Two tools:
+The solver is exposed to AI assistants (Claude, Cursor, …) over
+[MCP](https://modelcontextprotocol.io), so an agent can ask *"what's GTO here?"* and
+get answers straight from the strategy net.
 
-- **`get_gto_strategy`** — the Nash action mix at a hero decision.
-- **`get_range_grid`** — the 13×13 starting-hand range for the player to act on a
-  public line.
-
-Both take either plain poker notation (`hero: "As Ks"`, `position: "SB"`, `board`, a
-readable `line`) or the engine's raw token form. Full tool reference: [`mcp/README.md`](mcp/README.md).
-
-### Remote (hosted) — Streamable HTTP
-
-The easiest path: connect straight to our hosted instance — no clone, no deploy.
-Point any Streamable-HTTP-capable client at **`https://gto-thingy.vercel.app/api/mcp`**:
-
-```json
-{
-  "mcpServers": {
-    "gto-lab": { "url": "https://gto-thingy.vercel.app/api/mcp" }
-  }
-}
-```
-
-For a stdio-only client, bridge with [`mcp-remote`](https://www.npmjs.com/package/mcp-remote):
-
-```json
-{
-  "mcpServers": {
-    "gto-lab": { "command": "npx", "args": ["mcp-remote", "https://gto-thingy.vercel.app/api/mcp"] }
-  }
-}
-```
-
-The hosted instance is a shared, rate-limited best-effort service. For heavy or
-production use, deploy your own (`/api/mcp` on any Vercel deployment of this app) or
-run the local stdio server below.
-
-### Local — stdio
-
-Run the server straight from a clone (no deployment, native inference):
-
-```bash
-pnpm mcp          # speaks MCP over stdio
-```
-
-Register it with your agent. **Claude Code** users get it automatically from the
-checked-in [`.mcp.json`](.mcp.json); for **Claude Desktop** (`claude_desktop_config.json`)
-or any other client, add:
-
-```json
-{
-  "mcpServers": {
-    "gto-lab": { "command": "pnpm", "args": ["mcp"], "cwd": "/absolute/path/to/gto-lab" }
-  }
-}
-```
+- **End users** — step-by-step setup for every app is on the site: **[/agents](https://gto-thingy.vercel.app/agents)**. The easiest path is pointing a client at the hosted server, `https://gto-thingy.vercel.app/api/mcp`.
+- **Developers** — the tools, transports (stdio + remote HTTP), and self-hosting are documented in [`mcp/README.md`](mcp/README.md).
 
 ## The solver (`solver/`)
 
