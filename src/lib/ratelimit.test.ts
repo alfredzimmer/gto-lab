@@ -119,6 +119,20 @@ describe("enabled with credentials", () => {
 });
 
 describe("client IP keying", () => {
+  test("prefers x-vercel-forwarded-for over a caller-supplied x-forwarded-for", async () => {
+    const { enforceRateLimit } = await load(CREDS);
+    // The whole point of the preference: x-forwarded-for is appended to, so a
+    // caller can put anything in its leftmost slot. Keying on that would let one
+    // client mint a fresh bucket per request. The Vercel-set header wins.
+    await enforceRateLimit(
+      req({
+        "x-forwarded-for": "203.0.113.99",
+        "x-vercel-forwarded-for": "1.2.3.4",
+      }),
+    );
+    expect(mockLastKey).toBe("1.2.3.4");
+  });
+
   test("uses the first hop of x-forwarded-for", async () => {
     const { enforceRateLimit } = await load(CREDS);
     await enforceRateLimit(req({ "x-forwarded-for": "1.2.3.4, 10.0.0.1" }));

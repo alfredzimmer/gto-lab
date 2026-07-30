@@ -36,8 +36,23 @@ const limiter: Ratelimit | null = (() => {
 /** True when limiting is actually active (credentials present). */
 export const rateLimitEnabled = limiter !== null;
 
-/** Best-effort client IP from the proxy headers Vercel sets. */
+/**
+ * Client IP to key the limit on, preferring the header the platform writes over
+ * the one the caller can write.
+ *
+ * `x-forwarded-for` is caller-writable: proxies *append* to it, so its leftmost
+ * entry is whatever the original client claimed about itself. Anywhere upstream
+ * appends rather than overwrites, keying on that entry lets one caller mint a
+ * fresh bucket per request and the limit stops binding at all.
+ *
+ * `x-vercel-forwarded-for` is set by Vercel's own proxy, which drops any
+ * client-supplied copy, so it can't be forged. Prefer it; fall back to the
+ * previous chain everywhere else (self-hosted, local dev), where the fallback is
+ * no worse than what it replaces.
+ */
 function clientIp(req: Request): string {
+  const trusted = req.headers.get("x-vercel-forwarded-for");
+  if (trusted) return trusted.split(",")[0].trim();
   const fwd = req.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0].trim();
   return req.headers.get("x-real-ip") ?? "anonymous";
