@@ -21,6 +21,7 @@ import {
   type History,
   type HistoryToken,
   MAX_ACTIONS,
+  STACK,
   currentPlayer,
   infosetFeatures,
   isChance,
@@ -171,13 +172,14 @@ export async function computeRangeGrid(
   tokens: HistoryToken[],
   runBatch: BatchRunner,
   actionIndexOf: Record<string, number>,
+  stack: number = STACK,
 ): Promise<RangeGrid> {
   const nav = navigationHistory(tokens);
-  if (isChance(nav) || isTerminal(nav)) {
+  if (isChance(nav, stack) || isTerminal(nav, stack)) {
     throw new Error("not a decision node");
   }
-  const actingSeat = currentPlayer(nav);
-  const actions = legalActions(nav);
+  const actingSeat = currentPlayer(nav, stack);
+  const actions = legalActions(nav, stack);
   const indices = actions.map((a) => actionIndexOf[a]);
   const board = new Set(boardCardsOf(tokens));
 
@@ -195,7 +197,7 @@ export async function computeRangeGrid(
       actingSeat === 0
         ? [combo[0], combo[1], d0, d1, ...tokens]
         : [d0, d1, combo[0], combo[1], ...tokens];
-    features.set(infosetFeatures(h), i * FEATURE_DIM);
+    features.set(infosetFeatures(h, stack), i * FEATURE_DIM);
   });
 
   const logits = await runBatch(features, flatCombos.length);
@@ -232,9 +234,9 @@ export async function computeRangeGrid(
 }
 
 /** Pot / to-call / street summary for the explorer header. */
-export function nodeSummary(tokens: HistoryToken[]) {
+export function nodeSummary(tokens: HistoryToken[], stack: number = STACK) {
   const nav = navigationHistory(tokens);
-  const s = parseHistory(nav);
+  const s = parseHistory(nav, stack);
   const p = s.toAct;
   return {
     street: s.street,

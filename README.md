@@ -12,6 +12,15 @@ pnpm dev
 The app expects a trained strategy model at `public/models/holdem_strategy.onnx` (one is
 committed after training; see below to retrain).
 
+## Use it from an AI assistant (MCP)
+
+The solver is exposed to AI assistants (Claude, Cursor, …) over
+[MCP](https://modelcontextprotocol.io), so an agent can ask *"what's GTO here?"* and
+get answers straight from the strategy net.
+
+- **End users** — step-by-step setup for every app is on the site: **[/agents](https://gto-thingy.vercel.app/agents)**. The easiest path is pointing a client at the hosted server, `https://gto-thingy.vercel.app/api/mcp`.
+- **Developers** — the tools, transports (stdio + remote HTTP), and self-hosting are documented in [`mcp/README.md`](mcp/README.md).
+
 ## The solver (`solver/`)
 
 The GTO strategy is trained by an external-sampling Deep CFR

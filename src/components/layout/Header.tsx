@@ -10,6 +10,7 @@ export default function Header() {
     { name: "Ranges", href: "/ranges" },
     { name: "Trainer", href: "/trainer" },
     { name: "Play", href: "/play" },
+    { name: "AI Agents", href: "/agents" },
   ];
 
   return (
