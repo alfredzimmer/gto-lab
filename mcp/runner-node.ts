@@ -22,7 +22,14 @@ let sessionPromise: Promise<ort.InferenceSession> | null = null;
 
 function session(): Promise<ort.InferenceSession> {
   if (!sessionPromise) {
-    sessionPromise = ort.InferenceSession.create(MODEL_PATH);
+    // Clear the cache on failure so a transient error (e.g. a filesystem
+    // hiccup) doesn't permanently break every future call on this warm
+    // instance — the next call gets a fresh attempt instead of the same
+    // rejected promise forever.
+    sessionPromise = ort.InferenceSession.create(MODEL_PATH).catch((err) => {
+      sessionPromise = null;
+      throw err;
+    });
   }
   return sessionPromise;
 }

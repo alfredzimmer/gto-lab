@@ -36,8 +36,14 @@ function session(): Promise<ort.InferenceSession> {
     const bytes = new Uint8Array(
       readFileSync(publicPath("models", "holdem_strategy.onnx")),
     );
+    // Clear the cache on failure so a transient error doesn't permanently
+    // break every future call on this warm instance — the next call gets a
+    // fresh attempt instead of the same rejected promise forever.
     sessionPromise = ort.InferenceSession.create(bytes, {
       executionProviders: ["wasm"],
+    }).catch((err) => {
+      sessionPromise = null;
+      throw err;
     });
   }
   return sessionPromise;

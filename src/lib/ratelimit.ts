@@ -37,6 +37,13 @@ const limiter: Ratelimit | null = (() => {
 export const rateLimitEnabled = limiter !== null;
 
 /**
+ * True only inside an actual Vercel deployment — Vercel sets this itself in the
+ * function's runtime env, so a caller can't spoof it by sending a header.
+ * https://vercel.com/docs/environment-variables/system-environment-variables
+ */
+const ON_VERCEL = process.env.VERCEL === "1";
+
+/**
  * Client IP to key the limit on, preferring the header the platform writes over
  * the one the caller can write.
  *
@@ -46,13 +53,19 @@ export const rateLimitEnabled = limiter !== null;
  * fresh bucket per request and the limit stops binding at all.
  *
  * `x-vercel-forwarded-for` is set by Vercel's own proxy, which drops any
- * client-supplied copy, so it can't be forged. Prefer it; fall back to the
- * previous chain everywhere else (self-hosted, local dev), where the fallback is
- * no worse than what it replaces.
+ * client-supplied copy, so it can't be forged — but only when a Vercel proxy is
+ * actually in front of this process. mcp/README.md documents self-hosting with
+ * rate limiting enabled, and off-Vercel nothing strips that header, so trusting
+ * it unconditionally would let a self-hosted caller forge a fresh IP per
+ * request and bypass the limit entirely. Only trust it on Vercel; fall back to
+ * the previous chain everywhere else (self-hosted, local dev), where the
+ * fallback is no worse than what it replaces.
  */
 function clientIp(req: Request): string {
-  const trusted = req.headers.get("x-vercel-forwarded-for");
-  if (trusted) return trusted.split(",")[0].trim();
+  if (ON_VERCEL) {
+    const trusted = req.headers.get("x-vercel-forwarded-for");
+    if (trusted) return trusted.split(",")[0].trim();
+  }
   const fwd = req.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0].trim();
   return req.headers.get("x-real-ip") ?? "anonymous";

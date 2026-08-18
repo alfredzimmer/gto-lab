@@ -119,8 +119,8 @@ describe("enabled with credentials", () => {
 });
 
 describe("client IP keying", () => {
-  test("prefers x-vercel-forwarded-for over a caller-supplied x-forwarded-for", async () => {
-    const { enforceRateLimit } = await load(CREDS);
+  test("on Vercel, prefers x-vercel-forwarded-for over a caller-supplied x-forwarded-for", async () => {
+    const { enforceRateLimit } = await load({ ...CREDS, VERCEL: "1" });
     // The whole point of the preference: x-forwarded-for is appended to, so a
     // caller can put anything in its leftmost slot. Keying on that would let one
     // client mint a fresh bucket per request. The Vercel-set header wins.
@@ -131,6 +131,20 @@ describe("client IP keying", () => {
       }),
     );
     expect(mockLastKey).toBe("1.2.3.4");
+  });
+
+  test("off Vercel, ignores a caller-supplied x-vercel-forwarded-for (not trustworthy without Vercel's proxy)", async () => {
+    const { enforceRateLimit } = await load({ ...CREDS, VERCEL: undefined });
+    // Self-hosted deployments (per mcp/README.md) have no Vercel proxy to set
+    // or strip this header, so a caller could set it to a fresh value on every
+    // request and mint a new bucket each time. Must not be trusted here.
+    await enforceRateLimit(
+      req({
+        "x-forwarded-for": "203.0.113.99",
+        "x-vercel-forwarded-for": "1.2.3.4",
+      }),
+    );
+    expect(mockLastKey).toBe("203.0.113.99");
   });
 
   test("uses the first hop of x-forwarded-for", async () => {

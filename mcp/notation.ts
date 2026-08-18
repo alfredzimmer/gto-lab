@@ -83,10 +83,14 @@ export function resolveActionToken(
     return tok;
   };
 
-  if (/\bfold\b|^f$/.test(s)) return want(FOLD);
-  if (/\ball[\s-]?in\b|\bjam\b|\bshove\b|^a$/.test(s)) return want(ALL_IN);
+  if (/\bfold(?:s|ed|ing)?\b|^f$/.test(s)) return want(FOLD);
+  if (
+    /\ball[\s-]?in\b|\bjam(?:s|med|ming)?\b|\bshov(?:e[sd]?|ing)\b|^a$/.test(s)
+  )
+    return want(ALL_IN);
   // check/call before bet/raise so "check" isn't caught by a stray number.
-  if (/\bcheck\b|\bcall\b|^c$/.test(s)) return want(CHECK_CALL);
+  if (/\bcheck(?:s|ed|ing)?\b|\bcall(?:s|ed|ing)?\b|^c$/.test(s))
+    return want(CHECK_CALL);
 
   // Bet or raise: figure out which discrete size.
   const amounts = aggressiveAmounts(parseHistory(h, stack)); // token -> chip amt
@@ -100,7 +104,8 @@ export function resolveActionToken(
   if (/\bpot\b/.test(s) && amounts.b1 !== undefined) return want("b1");
 
   // Numeric size in big blinds -> nearest legal size (amounts are in 0.5bb).
-  const num = s.match(/(\d+(?:\.\d+)?)/);
+  // Skip digits that are actually a "3bet"/"4bet"-style label, not a size.
+  const num = s.match(/(\d+(?:\.\d+)?)(?!-?\s*bets?\b)/);
   if (num) {
     const targetBB = Number.parseFloat(num[1]);
     let best = aggTokens[0];
@@ -179,6 +184,15 @@ export function buildHistory(spot: FriendlySpot): {
   const line = normalizeLine(spot.line);
   const heroSeat = spot.heroSeat;
   const stack = spot.stack;
+
+  if (heroCards[0] === heroCards[1]) {
+    throw new Error(`hero cards must be distinct, got "${spot.hero}"`);
+  }
+  for (const c of heroCards) {
+    if (board.includes(c)) {
+      throw new Error(`hero card ${cardToStr(c)} also appears on the board`);
+    }
+  }
 
   const dead = new Set<number>([...heroCards, ...board]);
   const villain = placeholders(dead, 2);

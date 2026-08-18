@@ -43,6 +43,26 @@ function stackChips(stackBB: number | undefined): number {
   return stackBB === undefined ? STACK : Math.round(stackBB * 2);
 }
 
+/** Validate that a raw history's four hole-card slots are distinct 0..51 ints. */
+function validateHoleCards(history: History): void {
+  const holes = history.slice(0, 4);
+  if (holes.length !== 4) {
+    throw new Error("raw history must have 4 hole cards before any tokens");
+  }
+  const seen = new Set<number>();
+  for (const c of holes) {
+    if (typeof c !== "number" || !Number.isInteger(c) || c < 0 || c > 51) {
+      throw new Error(
+        `raw history hole card ${c} is not a valid card int (0-51)`,
+      );
+    }
+    if (seen.has(c)) {
+      throw new Error(`raw history hole card ${c} is duplicated`);
+    }
+    seen.add(c);
+  }
+}
+
 function textResult(payload: unknown) {
   return {
     content: [
@@ -117,6 +137,7 @@ export function registerGtoTools(server: McpServer, runBatch: BatchRunner) {
 
       if (args.history) {
         history = args.history as History;
+        validateHoleCards(history);
         stack = args.stack ?? STACK;
         if (isChance(history, stack) || isTerminal(history, stack)) {
           throw new Error("raw history is not at a decision node");
@@ -218,8 +239,13 @@ export function registerGtoTools(server: McpServer, runBatch: BatchRunner) {
         ? (args.tokens as HistoryToken[])
         : buildPublicTokens({ board: args.board, line: args.line, stack });
 
-      const grid = await computeRangeGrid(tokens, runBatch, ACTION_INDEX);
-      const summary = nodeSummary(tokens);
+      const grid = await computeRangeGrid(
+        tokens,
+        runBatch,
+        ACTION_INDEX,
+        stack,
+      );
+      const summary = nodeSummary(tokens, stack);
       const labels = describeSpot(
         navigationHistory(tokens),
         summary.actingSeat,
