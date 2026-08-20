@@ -18,6 +18,7 @@ type LimitResult = {
 // Prefixed `mock*` so Jest allows referencing it inside the hoisted factory.
 let mockLimit: (key: string) => Promise<LimitResult>;
 let mockLastKey: string | undefined;
+let mockLastRate: number | undefined;
 
 jest.mock("@upstash/redis", () => ({
   Redis: jest.fn().mockImplementation(() => ({})),
@@ -25,8 +26,9 @@ jest.mock("@upstash/redis", () => ({
 jest.mock("@upstash/ratelimit", () => ({
   Ratelimit: Object.assign(
     jest.fn().mockImplementation(() => ({
-      limit: (key: string) => {
+      limit: (key: string, opts?: { rate?: number }) => {
         mockLastKey = key;
+        mockLastRate = opts?.rate;
         return mockLimit(key);
       },
     })),
@@ -42,12 +44,21 @@ async function load(env: Record<string, string | undefined>) {
   return import("./ratelimit");
 }
 
-function req(headers: Record<string, string> = {}): Request {
-  return new Request("https://x/api/mcp", { method: "POST", headers });
+function req(headers: Record<string, string> = {}, body?: unknown): Request {
+  return new Request("https://x/api/mcp", {
+    method: "POST",
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+function toolCall(name: string): Request {
+  return req({}, { jsonrpc: "2.0", method: "tools/call", params: { name } });
 }
 
 beforeEach(() => {
   mockLastKey = undefined;
+  mockLastRate = undefined;
   mockLimit = async () => ({
     success: true,
     limit: 30,
@@ -159,5 +170,52 @@ describe("client IP keying", () => {
     expect(mockLastKey).toBe("9.9.9.9");
     await enforceRateLimit(req());
     expect(mockLastKey).toBe("anonymous");
+  });
+});
+
+describe("tool cost weighting", () => {
+  test("get_range_grid consumes more tokens than get_gto_strategy", async () => {
+    const { enforceRateLimit } = await load(CREDS);
+
+    await enforceRateLimit(toolCall("get_range_grid"));
+    expect(mockLastRate).toBe(10);
+
+    await enforceRateLimit(toolCall("get_gto_strategy"));
+    expect(mockLastRate).toBe(1);
+  });
+
+  test("non tools/call requests (e.g. initialize) default to 1 token", async () => {
+    const { enforceRateLimit } = await load(CREDS);
+    await enforceRateLimit(
+      req({}, { jsonrpc: "2.0", method: "initialize", params: {} }),
+    );
+    expect(mockLastRate).toBe(1);
+  });
+
+  test("an unlisted tool name defaults to 1 token", async () => {
+    const { enforceRateLimit } = await load(CREDS);
+    await enforceRateLimit(toolCall("some_future_tool"));
+    expect(mockLastRate).toBe(1);
+  });
+
+  test("a body-less or malformed request defaults to 1 token instead of throwing", async () => {
+    const { enforceRateLimit } = await load(CREDS);
+    await expect(enforceRateLimit(req())).resolves.toBeNull();
+    expect(mockLastRate).toBe(1);
+
+    const malformed = new Request("https://x/api/mcp", {
+      method: "POST",
+      body: "{not json",
+    });
+    await expect(enforceRateLimit(malformed)).resolves.toBeNull();
+    expect(mockLastRate).toBe(1);
+  });
+
+  test("peeking the tool name leaves the body intact for the downstream handler", async () => {
+    const { enforceRateLimit } = await load(CREDS);
+    const request = toolCall("get_range_grid");
+    await enforceRateLimit(request);
+    const body = await request.json();
+    expect(body.params.name).toBe("get_range_grid");
   });
 });

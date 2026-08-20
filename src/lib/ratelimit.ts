@@ -12,9 +12,57 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-/** Requests allowed per IP per rolling window. Tune for interactive agent use. */
+/** Token budget per IP per rolling window. Tune for interactive agent use. */
 const LIMIT = 30;
 const WINDOW = "60 s" as const;
+
+/**
+ * Tokens consumed per call, by MCP tool name. Tools differ hugely in compute
+ * cost: `get_range_grid` pushes the full 169-class expansion through the ONNX
+ * session per call (13 pairs × 6 + 78 suited × 4 + 78 offsuit × 12 = 1,326
+ * rows, worst case preflop with no dead cards — see src/lib/gto/ranges.ts),
+ * versus 1 row for `get_gto_strategy`. Metering both at the same 1 token
+ * would leave the expensive tool effectively unbounded (see issue #13).
+ *
+ * The literal 1,326:1 ratio isn't used directly — weighting `get_range_grid`
+ * by its true cost against the existing LIMIT=30 budget would reject it on
+ * the very first call. TOOL_COST instead picks a smaller multiplier that
+ * still caps it to a handful of calls per window (30 / 10 = 3), a steep cut
+ * from the 30/window it got before while keeping it usable interactively.
+ * Any tool not listed here (including future ones) defaults to 1 token.
+ */
+const TOOL_COST: Record<string, number> = {
+  get_range_grid: 10,
+};
+
+/**
+ * Tokens to consume for one call to `toolName`. Unknown or unlisted tools
+ * (and non-tool-call requests, e.g. `initialize`/`tools/list`) cost 1.
+ */
+function tokenCost(toolName: string | undefined): number {
+  if (!toolName) return 1;
+  return TOOL_COST[toolName] ?? 1;
+}
+
+/**
+ * Best-effort extraction of the MCP tool name from a `tools/call` JSON-RPC
+ * request body, without consuming the body the downstream handler still
+ * needs to read. `req.clone()` gives an independent stream to peek at;
+ * anything that isn't a JSON `tools/call` (SSE GETs, `initialize`, malformed
+ * bodies) falls through to `undefined`, which costs the default 1 token.
+ */
+async function toolNameFromBody(req: Request): Promise<string | undefined> {
+  try {
+    const body = (await req.clone().json()) as {
+      method?: string;
+      params?: { name?: string };
+    };
+    if (body?.method === "tools/call") return body.params?.name;
+  } catch {
+    // No body, not JSON, or already consumed — treat as default cost.
+  }
+  return undefined;
+}
 
 // One warm instance can serve many requests; an in-process cache lets obviously
 // over-limit IPs short-circuit without a Redis round-trip every time.
@@ -79,9 +127,11 @@ function clientIp(req: Request): string {
 export async function enforceRateLimit(req: Request): Promise<Response | null> {
   if (!limiter) return null;
 
+  const rate = tokenCost(await toolNameFromBody(req));
+
   let result: Awaited<ReturnType<Ratelimit["limit"]>>;
   try {
-    result = await limiter.limit(clientIp(req));
+    result = await limiter.limit(clientIp(req), { rate });
   } catch (err) {
     // A Redis outage must not take the endpoint down — fail open and log.
     console.error("rate limit check failed, allowing request:", err);
@@ -97,7 +147,7 @@ export async function enforceRateLimit(req: Request): Promise<Response | null> {
       jsonrpc: "2.0",
       error: {
         code: -32029, // implementation-defined; signals "slow down"
-        message: `Rate limit exceeded — ${limit} requests per ${WINDOW}. Retry in ${retryAfter}s.`,
+        message: `Rate limit exceeded — ${limit} tokens per ${WINDOW} (this call cost ${rate}). Retry in ${retryAfter}s.`,
       },
       id: null,
     }),
